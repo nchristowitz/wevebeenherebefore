@@ -35,7 +35,7 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            HelloWorldView()
+            Text("Select anaaan item")
         }
     }
 
