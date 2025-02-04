@@ -12,7 +12,7 @@ import SwiftData
 struct wevebeenherebeforeApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Card.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -25,7 +25,7 @@ struct wevebeenherebeforeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ResilienceView()
         }
         .modelContainer(sharedModelContainer)
     }
