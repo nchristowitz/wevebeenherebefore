@@ -16,10 +16,9 @@ struct AddDelightView: View {
                 ) {
                     HStack {
                         Image(systemName: "photo")
-                            .foregroundColor(.primary)
                         Text("Add Photo")
-                            .foregroundColor(.primary)
                     }
+                    .foregroundColor(textColor(for: selectedColor))
                 }
                 .onChange(of: selectedItem) {
                     Task {
@@ -42,6 +41,12 @@ struct AddDelightView: View {
             .padding(.vertical, 8)
             .background(.ultraThinMaterial)
         }
+    }
+    
+    private func textColor(for backgroundColor: Color) -> Color {
+        let components = UIColor(backgroundColor).cgColor.components ?? [0, 0, 0, 0]
+        let brightness = ((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000
+        return brightness > 0.5 ? .black : .white
     }
     
     private func extractColor(from image: UIImage) async -> Color? {

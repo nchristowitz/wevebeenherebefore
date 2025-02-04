@@ -62,15 +62,6 @@ struct AddCardBaseView<Content: View>: View {
                     Spacer()
                     
                     content()
-                        .padding(.bottom, 8)
-                    
-                    Button("Done") {
-                        saveCard()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    .foregroundColor(textColor(for: selectedColor))
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -109,7 +100,8 @@ struct AddCardBaseView<Content: View>: View {
     }
     
     private func saveCard() {
-        guard !text.isEmpty else { return }
+        // Allow saving if there's text OR (it's a delight AND there's an image)
+        guard !text.isEmpty || (type == .delight && imageData != nil) else { return }
         
         let card = Card(
             text: text,

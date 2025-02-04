@@ -85,20 +85,34 @@ struct CardView: View {
     let card: Card
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 0) {
             if let imageData = card.imageData,
                let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxHeight: 200)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                if card.text.isEmpty {
+                    // Photo only - fill entire card
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: 720)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                } else {
+                    // Photo with text - maintain padding
+                    Image(uiImage: uiImage)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity, maxHeight: 720)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .padding(.horizontal)
+                        .padding(.top)
+                }
             }
             
-            Text(card.text)
-                .font(.system(size: 32, weight: .regular, design: .default))
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if !card.text.isEmpty {
+                Text(card.text)
+                    .font(.system(size: 32, weight: .regular, design: .default))
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .background(card.color)
         .cornerRadius(12)
