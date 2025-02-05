@@ -24,7 +24,10 @@ final class Card {
     var colorBlue: Double
     var date: Date?   // Optional: only used for memories
     var imageData: Data?  // Optional: only used for delights
-    @Attribute(.ephemeral) var color: Color {
+    var createdAt: Date
+    
+    // Remove @Attribute and make it computed without storage
+    var color: Color {
         get {
             Color(.sRGB, red: colorRed, green: colorGreen, blue: colorBlue, opacity: 1)
         }
@@ -36,7 +39,6 @@ final class Card {
             }
         }
     }
-    let createdAt: Date
     
     init(text: String, type: CardType, color: Color, date: Date? = nil, imageData: Data? = nil) {
         self.text = text
