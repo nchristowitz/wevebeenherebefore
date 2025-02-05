@@ -27,7 +27,7 @@ struct AddCardBaseView<Content: View>: View {
                 
                 VStack(spacing: 0) {
                     ScrollView {
-                        VStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 16) {
                             if let imageData = imageData,
                                let uiImage = UIImage(data: imageData) {
                                 ZStack(alignment: .topTrailing) {
@@ -55,8 +55,10 @@ struct AddCardBaseView<Content: View>: View {
                                 placeholder: placeholderText,
                                 textColor: textColor(for: selectedColor)
                             )
-                            .padding(.horizontal)
+                            .frame(minHeight: 200)
                         }
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal)
                     }
                     
                     Spacer()

@@ -23,6 +23,7 @@ struct CardTextEditor: View {
                             .foregroundColor(textColor.opacity(0.5))
                             .allowsHitTesting(false)
                             .padding(.leading, 5)
+                            .padding(.top, 8)
                     }
                 },
                 alignment: .topLeading
