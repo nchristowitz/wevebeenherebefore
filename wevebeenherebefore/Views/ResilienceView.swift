@@ -3,32 +3,52 @@ import SwiftData
 
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
+    @Query private var cards: [Card]
     
     @State private var isShowingDelight = false
     @State private var isShowingMemory = false
     @State private var isShowingTechnique = false
-    @State private var cardToDelete: Card?
+    @State private var isShowingFilterMenu = false
+    @State private var selectedFilter: FilterType?
+    @State private var editingCard: Card?
+    
+    var filteredCards: [Card] {
+        guard let filter = selectedFilter else { return cards }
+        
+        switch filter {
+        case .memory:
+            return cards.filter { $0.type == .memory }
+        case .delight:
+            return cards.filter { $0.type == .delight }
+        case .technique:
+            return cards.filter { $0.type == .technique }
+        case .imagesOnly:
+            return cards.filter { $0.imageData != nil }
+        case .dateNewest:
+            return cards.sorted { $0.createdAt > $1.createdAt }
+        case .dateOldest:
+            return cards.sorted { $0.createdAt < $1.createdAt }
+        }
+    }
     
     var body: some View {
         NavigationStack {
             ZStack {
                 List {
-                    ForEach(cards) { card in
+                    ForEach(filteredCards) { card in
                         CardView(card: card)
-                            .listRowInsets(EdgeInsets())
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
-                            .padding(.vertical, 4)
-                            .padding(.horizontal, 16)
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
-                                    cardToDelete = card
+                                    modelContext.delete(card)
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
                                 
                                 Button {
-                                    // TODO: Implement edit functionality
+                                    editingCard = card
                                 } label: {
                                     Label("Edit", systemImage: "pencil")
                                 }
@@ -37,21 +57,47 @@ struct ResilienceView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 
                 VStack {
                     Spacer()
+                    
+                    if isShowingFilterMenu {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            FilterMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
+                        }
+                        .transition(.move(edge: .bottom))
+                    }
+                    
                     HStack {
                         Spacer()
+                        
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                isShowingFilterMenu.toggle()
+                            }
+                        }) {
+                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .frame(width: 56, height: 56)
+                                .background(Color.black)
+                                .clipShape(Circle())
+                                .shadow(radius: 4)
+                        }
+                        .padding(.trailing)
+                        
                         AddCardButton(
                             isShowingDelight: $isShowingDelight,
                             isShowingMemory: $isShowingMemory,
                             isShowingTechnique: $isShowingTechnique
                         )
-                        .padding()
+                        .padding(.trailing)
                     }
+                    .padding(.bottom)
                 }
             }
-            .navigationBarHidden(true)
             .sheet(isPresented: $isShowingDelight) {
                 AddDelightView()
             }
@@ -61,21 +107,15 @@ struct ResilienceView: View {
             .sheet(isPresented: $isShowingTechnique) {
                 AddTechniqueView()
             }
-            .alert("Delete Card", isPresented: .init(
-                get: { cardToDelete != nil },
-                set: { if !$0 { cardToDelete = nil } }
-            )) {
-                Button("Cancel", role: .cancel) {
-                    cardToDelete = nil
+            .sheet(item: $editingCard) { card in
+                switch card.type {
+                case .memory:
+                    AddMemoryView()
+                case .delight:
+                    AddDelightView()
+                case .technique:
+                    AddTechniqueView()
                 }
-                Button("Delete", role: .destructive) {
-                    if let card = cardToDelete {
-                        modelContext.delete(card)
-                        cardToDelete = nil
-                    }
-                }
-            } message: {
-                Text("Are you sure you want to delete this card?")
             }
         }
     }
@@ -86,6 +126,16 @@ struct CardView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if card.type == .memory, let date = card.date {
+                Text(date, format: .dateTime.month().year())
+                    .font(.caption)
+                    .textCase(.uppercase)
+                    .opacity(0.5)
+                    .padding(.horizontal)
+                    .padding(.top)
+                    .foregroundColor(textColor(for: card.color))
+            }
+            
             if let imageData = card.imageData,
                let uiImage = UIImage(data: imageData) {
                 if card.text.isEmpty {
