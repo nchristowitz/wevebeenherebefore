@@ -133,20 +133,17 @@ struct CardView: View {
                     .opacity(0.5)
                     .padding(.horizontal)
                     .padding(.top)
-                    .foregroundColor(textColor(for: card.color))
             }
             
             if let imageData = card.imageData,
                let uiImage = UIImage(data: imageData) {
                 if card.text.isEmpty {
-                    // Photo only - fill entire card
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
-                    // Photo with text - maintain padding
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
@@ -166,13 +163,7 @@ struct CardView: View {
         }
         .background(card.color)
         .cornerRadius(12)
-        .foregroundColor(textColor(for: card.color))
-    }
-    
-    private func textColor(for backgroundColor: Color) -> Color {
-        let components = UIColor(backgroundColor).cgColor.components ?? [0, 0, 0, 0]
-        let brightness = ((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000
-        return brightness > 0.5 ? .black : .white
+        .foregroundColor(card.color.contrastingTextColor())
     }
 }
 

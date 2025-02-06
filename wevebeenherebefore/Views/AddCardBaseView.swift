@@ -52,8 +52,8 @@ struct AddCardBaseView<Content: View>: View {
                             
                             CardTextEditor(
                                 text: $text,
-                                placeholder: placeholderText,
-                                textColor: textColor(for: selectedColor)
+                                placeholder: AppConfig.cardPlaceholders[type] ?? "",
+                                textColor: selectedColor.contrastingTextColor()
                             )
                             .frame(minHeight: 200)
                         }
@@ -80,6 +80,7 @@ struct AddCardBaseView<Content: View>: View {
                     }
                     .foregroundColor(textColor(for: selectedColor))
                 }
+
             }
         }
     }
@@ -139,3 +140,4 @@ extension Color {
         EmptyView()
     }
 } 
+
