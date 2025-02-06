@@ -25,7 +25,6 @@ struct FilterMenu: View {
         FilterOption(title: "Delights", type: .delight, isSelected: false),
         FilterOption(title: "Techniques", type: .technique, isSelected: false),
         FilterOption(title: "Images Only", type: .imagesOnly, isSelected: false),
-        FilterOption(title: "Newest First", type: .dateNewest, isSelected: false),
         FilterOption(title: "Oldest First", type: .dateOldest, isSelected: false)
     ]
     

@@ -3,7 +3,7 @@ import SwiftData
 
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var cards: [Card]
+    @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
     
     @State private var isShowingDelight = false
     @State private var isShowingMemory = false
@@ -143,14 +143,14 @@ struct CardView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: 720)
+                        .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
                     // Photo with text - maintain padding
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
-                        .frame(maxWidth: .infinity, maxHeight: 720)
+                        .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .padding(.horizontal)
                         .padding(.top)
