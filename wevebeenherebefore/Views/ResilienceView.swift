@@ -70,32 +70,29 @@ struct ResilienceView: View {
                     }
                     
                     HStack {
-                        Spacer()
-                        
-                        Button(action: {
-                            withAnimation(.spring()) {
-                                isShowingFilterMenu.toggle()
-                            }
-                        }) {
-                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                                .font(.title2)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.white)
-                                .frame(width: 56, height: 56)
-                                .background(Color.black)
+                        Button {
+                            isShowingFilterMenu = true
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease.circle")
+                                .font(.title)
+                                .fontWeight(.regular)
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 60)
+                                .background(.regularMaterial)
                                 .clipShape(Circle())
                                 .shadow(radius: 4)
                         }
-                        .padding(.trailing)
+                        
+                        Spacer()
                         
                         AddCardButton(
                             isShowingDelight: $isShowingDelight,
                             isShowingMemory: $isShowingMemory,
                             isShowingTechnique: $isShowingTechnique
                         )
-                        .padding(.trailing)
                     }
-                    .padding(.bottom)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
             }
             .sheet(isPresented: $isShowingDelight) {

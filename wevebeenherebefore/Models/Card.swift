@@ -5,14 +5,6 @@ enum CardType: String, Codable {
     case memory
     case delight
     case technique
-    
-    var defaultColor: Color {
-        switch self {
-        case .memory: return .pink.opacity(0.3)
-        case .delight: return .yellow.opacity(0.3)
-        case .technique: return .purple.opacity(0.3)
-        }
-    }
 }
 
 @Model

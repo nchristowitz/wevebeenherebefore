@@ -20,11 +20,11 @@ struct AddCardButton: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(Color.black)
+                .font(.title)
+                .fontWeight(.regular)
+                .foregroundColor(.primary)
+                .frame(width: 60, height: 60)
+                .background(.regularMaterial)
                 .clipShape(Circle())
                 .shadow(radius: 4)
         }
