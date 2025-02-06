@@ -13,6 +13,7 @@ struct wevebeenherebeforeApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Card.self,
+            Episode.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

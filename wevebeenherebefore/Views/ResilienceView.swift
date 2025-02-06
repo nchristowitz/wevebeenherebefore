@@ -9,6 +9,8 @@ struct ResilienceView: View {
     @State private var isShowingMemory = false
     @State private var isShowingTechnique = false
     @State private var isShowingFilterMenu = false
+    @State private var isShowingEpisodeFlow = false
+    @State private var isShowingEpisodesList = false
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
     
@@ -71,7 +73,7 @@ struct ResilienceView: View {
                     
                     HStack {
                         Button {
-                            isShowingFilterMenu = true
+                            isShowingFilterMenu.toggle()
                         } label: {
                             Image(systemName: "line.3.horizontal.decrease.circle")
                                 .font(.title)
@@ -82,6 +84,13 @@ struct ResilienceView: View {
                                 .clipShape(Circle())
                                 .shadow(radius: 4)
                         }
+                        
+                        Spacer()
+                        
+                        EpisodeButton(
+                            isShowingEpisodeFlow: $isShowingEpisodeFlow,
+                            isShowingEpisodeList: $isShowingEpisodesList
+                        )
                         
                         Spacer()
                         
@@ -103,6 +112,12 @@ struct ResilienceView: View {
             }
             .sheet(isPresented: $isShowingTechnique) {
                 AddTechniqueView()
+            }
+            .sheet(isPresented: $isShowingEpisodeFlow) {
+                EpisodeFlowCoordinator()
+            }
+            .sheet(isPresented: $isShowingEpisodesList) {
+                EpisodesListView()
             }
             .sheet(item: $editingCard) { card in
                 switch card.type {
