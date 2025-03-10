@@ -115,6 +115,7 @@ struct ResilienceView: View {
             }
             .sheet(isPresented: $isShowingEpisodeFlow) {
                 EpisodeFlowCoordinator()
+                    .interactiveDismissDisabled()
             }
             .sheet(isPresented: $isShowingEpisodesList) {
                 EpisodesListView()

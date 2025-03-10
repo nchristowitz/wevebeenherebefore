@@ -6,6 +6,7 @@ class EpisodeFlowState: ObservableObject {
     @Published var emotions: [String: Int] = [:]
     @Published var responses: [String: String] = [:] // Changed from [Int: String]
     @Published var episodeTitle: String = ""
+    @Published var isShowingExitAlert = false
     
     let promptQuestions = [
         "Describe the episode": "Think about future you as you write this, keep it short but detailed enough",
@@ -73,6 +74,13 @@ class EpisodeFlowState: ObservableObject {
             currentStep = .prompt(EpisodePrompt.prompts.last!)
         }
     }
+    
+    var shouldShowCloseButton: Bool {
+        if case .summary = currentStep {
+            return false
+        }
+        return true
+    }
 }
 
 struct EpisodeFlowCoordinator: View {
@@ -91,22 +99,35 @@ struct EpisodeFlowCoordinator: View {
                     }
                     
                 case .prompt(let prompt):
-                    EpisodePromptView(
-                        prompt: prompt,
-                        text: Binding(
-                            get: { state.responses[prompt.question] ?? "" },
-                            set: { state.responses[prompt.question] = $0 }
-                        ),
-                        onNext: {
-                            state.moveToNext()
-                        }
-                    )
+                    if prompt.isLast {
+                        EpisodeTitlePromptView(
+                            prompt: prompt,
+                            text: Binding(
+                                get: { state.responses[prompt.question] ?? "" },
+                                set: { state.responses[prompt.question] = $0 }
+                            ),
+                            onNext: {
+                                state.moveToNext()
+                            }
+                        )
+                    } else {
+                        EpisodePromptView(
+                            prompt: prompt,
+                            text: Binding(
+                                get: { state.responses[prompt.question] ?? "" },
+                                set: { state.responses[prompt.question] = $0 }
+                            ),
+                            onNext: {
+                                state.moveToNext()
+                            }
+                        )
+                    }
                     
                 case .summary:
                     EpisodeSummaryView(
                         emotions: state.emotions,
                         prompts: state.responses,
-                        title: state.episodeTitle,
+                        title: state.responses["Let's give this episode a title"] ?? "",
                         onSave: {
                             saveEpisode()
                             dismiss()
@@ -114,12 +135,33 @@ struct EpisodeFlowCoordinator: View {
                     )
                 }
             }
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if state.shouldShowCloseButton {
+                        Button {
+                            state.isShowingExitAlert = true
+                        } label: {
+                            Image(systemName: "xmark")
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+            }
+        }
+        .alert("Are you sure?", isPresented: $state.isShowingExitAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Exit", role: .destructive) {
+                dismiss()
+            }
+        } message: {
+            Text("You'll lose any progress if you exit now.")
         }
     }
     
     private func saveEpisode() {
+        let title = state.responses[EpisodePrompt.prompts.last?.question ?? ""] ?? ""
         let episode = Episode(
-            title: state.episodeTitle,
+            title: title,
             emotions: state.emotions,
             prompts: state.responses
         )
