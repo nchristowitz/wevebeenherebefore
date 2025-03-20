@@ -123,11 +123,11 @@ struct ResilienceView: View {
             .sheet(item: $editingCard) { card in
                 switch card.type {
                 case .memory:
-                    AddMemoryView()
+                    AddMemoryView(existingCard: card)
                 case .delight:
-                    AddDelightView()
+                    AddDelightView(existingCard: card)
                 case .technique:
-                    AddTechniqueView()
+                    AddTechniqueView(existingCard: card)
                 }
             }
         }

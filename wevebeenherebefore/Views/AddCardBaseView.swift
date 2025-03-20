@@ -11,12 +11,21 @@ struct AddCardBaseView<Content: View>: View {
     @State private var selectedDate = Date()
     let imageData: Data?
     let content: () -> Content
+    let existingCard: Card?
     
-    init(type: CardType, selectedColor: Binding<Color>, imageData: Data? = nil, @ViewBuilder content: @escaping () -> Content) {
+    init(type: CardType, selectedColor: Binding<Color>, imageData: Data? = nil, existingCard: Card? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.type = type
         self._selectedColor = selectedColor
         self.imageData = imageData
+        self.existingCard = existingCard
         self.content = content
+        
+        if let card = existingCard {
+            _text = State(initialValue: card.text)
+            if let date = card.date {
+                _selectedDate = State(initialValue: date)
+            }
+        }
     }
     
     var body: some View {
@@ -103,18 +112,28 @@ struct AddCardBaseView<Content: View>: View {
     }
     
     private func saveCard() {
-        // Allow saving if there's text OR (it's a delight AND there's an image)
         guard !text.isEmpty || (type == .delight && imageData != nil) else { return }
         
-        let card = Card(
-            text: text,
-            type: type,
-            color: selectedColor,
-            date: type == .memory ? selectedDate : nil,
-            imageData: type == .delight ? imageData : nil
-        )
+        if let existingCard = existingCard {
+            existingCard.text = text
+            existingCard.color = selectedColor
+            if type == .memory {
+                existingCard.date = selectedDate
+            }
+            if type == .delight {
+                existingCard.imageData = imageData
+            }
+        } else {
+            let card = Card(
+                text: text,
+                type: type,
+                color: selectedColor,
+                date: type == .memory ? selectedDate : nil,
+                imageData: type == .delight ? imageData : nil
+            )
+            modelContext.insert(card)
+        }
         
-        modelContext.insert(card)
         dismiss()
     }
 }

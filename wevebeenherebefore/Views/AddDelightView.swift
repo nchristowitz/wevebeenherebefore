@@ -4,10 +4,22 @@ import PhotosUI
 struct AddDelightView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
-    @State private var selectedColor = Color(uiColor: .systemGray6)
+    @State private var selectedColor: Color
+    let existingCard: Card?
+    
+    init(existingCard: Card? = nil) {
+        self.existingCard = existingCard
+        _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
+        _selectedImageData = State(initialValue: existingCard?.imageData)
+    }
     
     var body: some View {
-        AddCardBaseView(type: .delight, selectedColor: $selectedColor, imageData: selectedImageData) {
+        AddCardBaseView(
+            type: .delight,
+            selectedColor: $selectedColor,
+            imageData: selectedImageData,
+            existingCard: existingCard
+        ) {
             HStack {
                 PhotosPicker(
                     selection: $selectedItem,
