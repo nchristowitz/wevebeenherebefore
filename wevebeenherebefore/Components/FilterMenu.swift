@@ -3,8 +3,8 @@ import SwiftUI
 struct FilterOption: Identifiable {
     let id = UUID()
     let title: String
+    let icon: String
     let type: FilterType
-    var isSelected: Bool
 }
 
 enum FilterType {
@@ -21,46 +21,45 @@ struct FilterMenu: View {
     @Binding var isPresented: Bool
     
     let options: [FilterOption] = [
-        FilterOption(title: "Memories", type: .memory, isSelected: false),
-        FilterOption(title: "Delights", type: .delight, isSelected: false),
-        FilterOption(title: "Techniques", type: .technique, isSelected: false),
-        FilterOption(title: "Images Only", type: .imagesOnly, isSelected: false),
-        FilterOption(title: "Oldest First", type: .dateOldest, isSelected: false)
+        FilterOption(title: "Memories", icon: "book", type: .memory),
+        FilterOption(title: "Delights", icon: "sparkles", type: .delight),
+        FilterOption(title: "Techniques", icon: "figure.mind.and.body", type: .technique),
+        FilterOption(title: "Images Only", icon: "photo", type: .imagesOnly),
+        FilterOption(title: "Oldest First", icon: "arrow.up.circle", type: .dateOldest)
     ]
     
     var body: some View {
-        HStack(spacing: 8) {
-            // Clear filters button
-            Button(action: {
-                selectedFilter = nil
-                isPresented = false
-            }) {
-                HStack {
-                    Image(systemName: "xmark")
-                    Text("Clear")
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(spacing: 12) {
+                    if selectedFilter != nil {
+                        MenuButton(
+                            title: "Clear Filters",
+                            icon: "xmark.circle.fill",
+                            isFullRounded: true,
+                            action: {
+                                selectedFilter = nil
+                                isPresented = false
+                            }
+                        )
+                    }
+                    
+                    ForEach(options) { option in
+                        MenuButton(
+                            title: option.title,
+                            icon: option.icon,
+                            isSelected: selectedFilter == option.type,
+                            isFullRounded: true,
+                            action: {
+                                selectedFilter = option.type
+                                isPresented = false
+                            }
+                        )
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
-                .foregroundColor(selectedFilter == nil ? .primary : .secondary)
-                .clipShape(Capsule())
+                .padding()
             }
-            
-            ForEach(options) { option in
-                Button(action: {
-                    selectedFilter = option.type
-                    isPresented = false
-                }) {
-                    Text(option.title)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(.ultraThinMaterial)
-                        .foregroundColor(selectedFilter == option.type ? .primary : .secondary)
-                        .clipShape(Capsule())
-                }
-            }
+            .frame(idealHeight: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .padding(.horizontal)
-        .padding(.bottom, 8)
     }
 } 

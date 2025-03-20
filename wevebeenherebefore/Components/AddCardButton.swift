@@ -19,14 +19,7 @@ struct AddCardButton: View {
                 Label("Add Technique", systemImage: "figure.mind.and.body")
             }
         } label: {
-            Image(systemName: "plus")
-                .font(.title)
-                .fontWeight(.regular)
-                .foregroundColor(.primary)
-                .frame(width: 60, height: 60)
-                .background(.regularMaterial)
-                .clipShape(Circle())
-                .shadow(radius: 4)
+            CircularButton(systemImage: "plus", action: {})
         }
     }
 } 

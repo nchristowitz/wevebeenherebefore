@@ -13,6 +13,8 @@ struct ResilienceView: View {
     @State private var isShowingEpisodesList = false
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
+    @State private var isShowingAddMenu = false
+    @State private var isShowingEpisodeMenu = false
     
     var filteredCards: [Card] {
         guard let filter = selectedFilter else { return cards }
@@ -35,7 +37,8 @@ struct ResilienceView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack {
+            ZStack(alignment: .bottom) {
+                // Main list content
                 List {
                     ForEach(filteredCards) { card in
                         CardView(card: card)
@@ -61,48 +64,46 @@ struct ResilienceView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 
-                VStack {
-                    Spacer()
-                    
-                    if isShowingFilterMenu {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            FilterMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
-                        }
-                        .transition(.move(edge: .bottom))
+                // Bottom buttons
+                HStack(spacing: 24) {
+                    CircularButton(systemImage: "line.3.horizontal.decrease.circle") {
+                        isShowingFilterMenu = true
                     }
                     
-                    HStack {
-                        Button {
-                            isShowingFilterMenu.toggle()
-                        } label: {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
-                                .font(.title)
-                                .fontWeight(.regular)
-                                .foregroundColor(.primary)
-                                .frame(width: 60, height: 60)
-                                .background(.regularMaterial)
-                                .clipShape(Circle())
-                                .shadow(radius: 4)
-                        }
-                        
-                        Spacer()
-                        
-                        EpisodeButton(
-                            isShowingEpisodeFlow: $isShowingEpisodeFlow,
-                            isShowingEpisodeList: $isShowingEpisodesList
-                        )
-                        
-                        Spacer()
-                        
-                        AddCardButton(
-                            isShowingDelight: $isShowingDelight,
-                            isShowingMemory: $isShowingMemory,
-                            isShowingTechnique: $isShowingTechnique
-                        )
+                    CircularButton(systemImage: "light.beacon.max") {
+                        isShowingEpisodeMenu = true
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
+                    
+                    CircularButton(systemImage: "plus") {
+                        isShowingAddMenu = true
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 16)
+            }
+            .sheet(isPresented: $isShowingFilterMenu) {
+                NavigationStack {
+                    FilterMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
+                        .navigationTitle("Filter by")
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+            }
+            .sheet(isPresented: $isShowingAddMenu) {
+                NavigationStack {
+                    AddCardMenu(
+                        isShowingDelight: $isShowingDelight,
+                        isShowingMemory: $isShowingMemory,
+                        isShowingTechnique: $isShowingTechnique,
+                        isPresented: $isShowingAddMenu
+                    )
+                    .navigationTitle("Add a resilience card")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $isShowingDelight) {
                 AddDelightView()
@@ -119,6 +120,19 @@ struct ResilienceView: View {
             }
             .sheet(isPresented: $isShowingEpisodesList) {
                 EpisodesListView()
+            }
+            .sheet(isPresented: $isShowingEpisodeMenu) {
+                NavigationStack {
+                    EpisodeMenu(
+                        isShowingEpisodeFlow: $isShowingEpisodeFlow,
+                        isShowingEpisodeList: $isShowingEpisodesList,
+                        isPresented: $isShowingEpisodeMenu
+                    )
+                    .navigationTitle("Episodes")
+                    .navigationBarTitleDisplayMode(.inline)
+                }
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
             }
             .sheet(item: $editingCard) { card in
                 switch card.type {
@@ -177,6 +191,39 @@ struct CardView: View {
         .background(card.color)
         .cornerRadius(12)
         .foregroundColor(card.color.contrastingTextColor())
+    }
+}
+
+struct FilterMenuView: View {
+    @Binding var selectedFilter: FilterType?
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationStack {
+            FilterMenu(selectedFilter: $selectedFilter, isPresented: $isPresented)
+                .navigationTitle("Filter by")
+                .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+struct AddCardMenuView: View {
+    @Binding var isShowingDelight: Bool
+    @Binding var isShowingMemory: Bool
+    @Binding var isShowingTechnique: Bool
+    @Binding var isPresented: Bool
+    
+    var body: some View {
+        NavigationStack {
+            AddCardMenu(
+                isShowingDelight: $isShowingDelight,
+                isShowingMemory: $isShowingMemory,
+                isShowingTechnique: $isShowingTechnique,
+                isPresented: $isPresented
+            )
+            .navigationTitle("Add a resilience card")
+            .navigationBarTitleDisplayMode(.inline)
+        }
     }
 }
 

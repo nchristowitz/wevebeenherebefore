@@ -14,14 +14,7 @@ struct EpisodeButton: View {
                 Label("View my episodes", systemImage: "list.bullet")
             }
         } label: {
-            Image(systemName: "light.beacon.max")
-                .font(.title)
-                .fontWeight(.regular)
-                .foregroundColor(.primary)
-                .frame(width: 60, height: 60)
-                .background(.regularMaterial)
-                .clipShape(Circle())
-                .shadow(radius: 4)
+            CircularButton(systemImage: "light.beacon.max", action: {})
         }
     }
 } 
