@@ -11,13 +11,12 @@ struct CircularButton: View {
                 .font(.title2)
                 .fontWeight(.medium)
                 .foregroundColor(.primary)
-                .frame(width: 50, height: 50)
+                .frame(width: 60, height: 60)
                 .background(
                     Circle()
-                        .fill(.ultraThinMaterial)
+                        .fill(.thickMaterial)
                         .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
                 )
-                .scaleEffect(isPressed ? 0.95 : 1.0)
                 .animation(.spring(response: 0.3), value: isPressed)
         }
         .pressEvents(onPress: { isPressed = true }, onRelease: { isPressed = false })
