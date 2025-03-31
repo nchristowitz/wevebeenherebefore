@@ -37,7 +37,7 @@ struct ResilienceView: View {
     
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottom) {
+            ZStack {
                 // Main list content
                 List {
                     ForEach(filteredCards) { card in
@@ -64,46 +64,49 @@ struct ResilienceView: View {
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
                 
-                // Bottom buttons
-                HStack(spacing: 24) {
-                    CircularButton(systemImage: "line.3.horizontal.decrease.circle") {
-                        isShowingFilterMenu = true
+                VStack {
+                    Spacer()
+                
+                    // Bottom buttons
+                    HStack(spacing: 24) {
+                        CircularButton(systemImage: "line.3.horizontal.decrease.circle") {
+                            isShowingFilterMenu = true
+                        }
+                        
+                        CircularButton(systemImage: "light.beacon.max") {
+                            isShowingEpisodeMenu = true
+                        }
+                        
+                        CircularButton(systemImage: "plus") {
+                            isShowingAddMenu = true
+                        }
                     }
-                    
-                    CircularButton(systemImage: "light.beacon.max") {
-                        isShowingEpisodeMenu = true
-                    }
-                    
-                    CircularButton(systemImage: "plus") {
-                        isShowingAddMenu = true
-                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 16)
                 }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-            }
-            .sheet(isPresented: $isShowingFilterMenu) {
-                NavigationStack {
+                
+                // Menu trays (always in view hierarchy)
+                MenuTray(title: "Filter by", isPresented: $isShowingFilterMenu) {
                     FilterMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
-                        .navigationTitle("Filter by")
-                        .navigationBarTitleDisplayMode(.inline)
                 }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $isShowingAddMenu) {
-                NavigationStack {
+                
+                MenuTray(title: "Add a resilience card", isPresented: $isShowingAddMenu) {
                     AddCardMenu(
                         isShowingDelight: $isShowingDelight,
                         isShowingMemory: $isShowingMemory,
                         isShowingTechnique: $isShowingTechnique,
                         isPresented: $isShowingAddMenu
                     )
-                    .navigationTitle("Add a resilience card")
-                    .navigationBarTitleDisplayMode(.inline)
                 }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
+                
+                MenuTray(title: "Episodes", isPresented: $isShowingEpisodeMenu) {
+                    EpisodeMenu(
+                        isShowingEpisodeFlow: $isShowingEpisodeFlow,
+                        isShowingEpisodeList: $isShowingEpisodesList,
+                        isPresented: $isShowingEpisodeMenu
+                    )
+                }
             }
             .sheet(isPresented: $isShowingDelight) {
                 AddDelightView()
@@ -120,19 +123,6 @@ struct ResilienceView: View {
             }
             .sheet(isPresented: $isShowingEpisodesList) {
                 EpisodesListView()
-            }
-            .sheet(isPresented: $isShowingEpisodeMenu) {
-                NavigationStack {
-                    EpisodeMenu(
-                        isShowingEpisodeFlow: $isShowingEpisodeFlow,
-                        isShowingEpisodeList: $isShowingEpisodesList,
-                        isPresented: $isShowingEpisodeMenu
-                    )
-                    .navigationTitle("Episodes")
-                    .navigationBarTitleDisplayMode(.inline)
-                }
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
             }
             .sheet(item: $editingCard) { card in
                 switch card.type {

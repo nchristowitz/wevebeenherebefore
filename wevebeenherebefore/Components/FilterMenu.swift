@@ -29,37 +29,32 @@ struct FilterMenu: View {
     ]
     
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: 12) {
-                    if selectedFilter != nil {
-                        MenuButton(
-                            title: "Clear Filters",
-                            icon: "xmark.circle.fill",
-                            isFullRounded: true,
-                            action: {
-                                selectedFilter = nil
-                                isPresented = false
-                            }
-                        )
+        VStack(spacing: 12) {
+            if selectedFilter != nil {
+                MenuButton(
+                    title: "Clear Filters",
+                    icon: "xmark.circle.fill",
+                    isFullRounded: true,
+                    action: {
+                        selectedFilter = nil
+                        isPresented = false
                     }
-                    
-                    ForEach(options) { option in
-                        MenuButton(
-                            title: option.title,
-                            icon: option.icon,
-                            isSelected: selectedFilter == option.type,
-                            isFullRounded: true,
-                            action: {
-                                selectedFilter = option.type
-                                isPresented = false
-                            }
-                        )
-                    }
-                }
-                .padding()
+                )
             }
-            .frame(idealHeight: .infinity, maxHeight: .infinity, alignment: .top)
+            
+            ForEach(options) { option in
+                MenuButton(
+                    title: option.title,
+                    icon: option.icon,
+                    isSelected: selectedFilter == option.type,
+                    isFullRounded: true,
+                    action: {
+                        selectedFilter = option.type
+                        isPresented = false
+                    }
+                )
+            }
         }
+        .padding(.horizontal)
     }
 } 
