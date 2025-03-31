@@ -76,10 +76,10 @@ struct EmotionRatingRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             
             GeometryReader { geometry in
-                let availableWidth = geometry.size.width
+                let availableWidth = max(geometry.size.width, 1) // Ensure width is never zero
                 let spacing: CGFloat = 16
                 let totalSpacing = spacing * 4 // 4 spaces between 5 circles
-                let circleSize = (availableWidth - totalSpacing) / 5
+                let circleSize = max((availableWidth - totalSpacing) / 5, 1) // Ensure circle size is never zero or negative
                 
                 HStack(spacing: spacing) {
                     ForEach(1...5, id: \.self) { value in
@@ -98,7 +98,7 @@ struct EmotionRatingRow: View {
                     }
                 }
             }
-            .frame(height: max(44, (UIScreen.main.bounds.width - 96) / 5)) // Ensure minimum height of 44pt
+            .frame(height: 60) // Fixed height instead of calculation
         }
     }
 }

@@ -13,7 +13,6 @@ struct EpisodePromptView: View {
             Text(prompt.question)
                 .font(.title)
                 .fontWeight(.bold)
-                .padding(.top)
             
             Text(prompt.placeholder)
                 .font(.body)
@@ -21,24 +20,31 @@ struct EpisodePromptView: View {
             
             TextEditor(text: $text)
                 .focused($isFocused)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .scrollContentBackground(.hidden)
+                .font(.body)
+                .padding()
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
-                .toolbar {
-                    ToolbarItemGroup(placement: .keyboard) {
-                        Spacer()
-                        Button(prompt.isLast ? "Done" : "Next") {
-                            onNext()
-                        }
-                        .disabled(text.isEmpty)
-                    }
-                }
+                
+            Spacer()
         }
-        .padding(.horizontal)
-        .navigationBarBackButtonHidden(false) // Show default back button
+        .padding()
+        .frame(maxHeight: .infinity, alignment: .top)
+        .navigationBarBackButtonHidden(false)
         .onAppear {
             isFocused = true
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                HStack {
+                    Spacer()
+                    Button(prompt.isLast ? "Done" : "Next") {
+                        onNext()
+                    }
+                    .disabled(text.isEmpty)
+                    .frame(minWidth: 60)
+                }
+            }
         }
     }
 }

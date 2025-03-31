@@ -43,6 +43,14 @@ struct EpisodeSummaryView: View {
         }
     }
     
+    // Define the order of prompts
+    private let promptOrder = [
+        "Describe the episode",
+        "How do you think you'll feel about this in 2 weeks?",
+        "How do you think you'll feel about this in 3 months?"
+        // Add any other prompts in the desired order
+    ]
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -74,12 +82,28 @@ struct EpisodeSummaryView: View {
                     }
                 }
                 
-                // Prompts and Responses
+                // Prompts and Responses in desired order
                 VStack(alignment: .leading, spacing: 24) {
-                    ForEach(Array(prompts.sorted(by: { $0.key < $1.key })), id: \.key) { prompt, response in
-                        if prompt != "Let's give this episode a title" {
+                    // First, show prompts in the defined order (if they exist)
+                    ForEach(promptOrder, id: \.self) { promptKey in
+                        if let response = prompts[promptKey] {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(prompt)
+                                Text(promptKey)
+                                    .font(.headline)
+                                
+                                Text(response)
+                                    .font(.body)
+                            }
+                        }
+                    }
+                    
+                    // Then show any remaining prompts (except the title prompt)
+                    ForEach(Array(prompts.keys.sorted()).filter { key in
+                        key != "Let's give this episode a title" && !promptOrder.contains(key)
+                    }, id: \.self) { promptKey in
+                        if let response = prompts[promptKey] {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(promptKey)
                                     .font(.headline)
                                 
                                 Text(response)

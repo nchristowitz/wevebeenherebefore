@@ -10,12 +10,7 @@ struct EpisodesListView: View {
         NavigationStack {
             List {
                 ForEach(episodes) { episode in
-                    NavigationLink(destination: EpisodeSummaryView(
-                        emotions: episode.emotions,
-                        prompts: episode.prompts,
-                        title: episode.title,
-                        onSave: {}
-                    )) {
+                    NavigationLink(value: episode) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(episode.title)
                                 .font(.headline)
@@ -28,6 +23,14 @@ struct EpisodesListView: View {
                     }
                 }
                 .onDelete(perform: deleteEpisodes)
+            }
+            .navigationDestination(for: Episode.self) { episode in
+                EpisodeSummaryView(
+                    emotions: episode.emotions,
+                    prompts: episode.prompts,
+                    title: episode.title,
+                    onSave: {}
+                )
             }
             .navigationTitle("My Episodes")
             .toolbar {

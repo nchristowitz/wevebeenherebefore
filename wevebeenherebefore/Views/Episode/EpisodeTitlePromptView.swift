@@ -13,7 +13,6 @@ struct EpisodeTitlePromptView: View {
             Text(prompt.question)
                 .font(.title)
                 .fontWeight(.bold)
-                .padding(.top)
             
             Text(prompt.placeholder)
                 .font(.body)
@@ -22,27 +21,30 @@ struct EpisodeTitlePromptView: View {
             TextEditor(text: $text)
                 .focused($isFocused)
                 .scrollContentBackground(.hidden)
-                .frame(maxWidth: .infinity)
-                .frame(height: 80) // Fixed height in separate frame modifier
                 .font(.body)
                 .padding()
                 .background(Color(.systemGray6))
                 .cornerRadius(12)
-            
+                .frame(height: 80)
+                
             Spacer()
         }
-        .padding(.horizontal)
+        .padding()
+        .frame(maxHeight: .infinity, alignment: .top)
         .navigationBarBackButtonHidden(false)
         .onAppear {
             isFocused = true
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") {
-                    onNext()
+                HStack {
+                    Spacer()
+                    Button("Done") {
+                        onNext()
+                    }
+                    .disabled(text.isEmpty)
+                    .frame(minWidth: 60)
                 }
-                .disabled(text.isEmpty)
             }
         }
     }
