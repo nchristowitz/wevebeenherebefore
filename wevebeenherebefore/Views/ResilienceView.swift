@@ -69,11 +69,11 @@ struct ResilienceView: View {
                 
                     // Bottom buttons
                     HStack(spacing: 24) {
-                        CircularButton(systemImage: "line.3.horizontal.decrease.circle") {
+                        CircularButton(systemImage: "line.3.horizontal.decrease") {
                             isShowingFilterMenu = true
                         }
                         
-                        CircularButton(systemImage: "light.beacon.max") {
+                        CircularButton(systemImage: "tornado") {
                             isShowingEpisodeMenu = true
                         }
                         

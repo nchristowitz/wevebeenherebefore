@@ -20,6 +20,29 @@ struct EpisodeSummaryView: View {
         return baseFontSize * pow(scaleFactor, CGFloat(rating - 1))
     }
     
+    private func colorForEmotion(_ emotion: String) -> Color {
+        switch emotion {
+        case "Anger":
+            return .red
+        case "Sadness":
+            return .blue
+        case "Fear":
+            return .purple
+        case "Anxiety":
+            return .indigo
+        case "Shame":
+            return .brown
+        case "Disgust":
+            return .green
+        case "Grief":
+            return .teal
+        case "Confusion":
+            return .orange
+        default:
+            return .gray
+        }
+    }
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -39,19 +62,13 @@ struct EpisodeSummaryView: View {
                     Text("Emotions")
                         .font(.headline)
                     
-                    FlowLayout(spacing: 8) {
+                    FlowLayout(spacing: 12) {
                         ForEach(Array(emotions.sorted(by: { $0.value > $1.value })), id: \.key) { emotion, rating in
                             if rating > 0 {
                                 Text(emotion)
                                     .font(.system(size: fontSizeForRating(rating)))
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.black)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.black.opacity(0.05))
-                                    )
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(colorForEmotion(emotion))
                             }
                         }
                     }
