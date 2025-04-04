@@ -28,7 +28,7 @@ struct MenuTray<Content: View>: View {
                     // Header with drag indicator
                     VStack(spacing: 8) {
                         RoundedRectangle(cornerRadius: 2.5)
-                            .fill(Color.secondary.opacity(0.3))
+                            .fill(Color.secondary.opacity(0.1))
                             .frame(width: 36, height: 5)
                             .padding(.top, 8)
                         
@@ -37,27 +37,27 @@ struct MenuTray<Content: View>: View {
                             .padding(.bottom, 8)
                     }
                     .frame(maxWidth: .infinity)
-                    .background(.white)
+                    .background(Color(UIColor.systemBackground))
                     
                     // Content
                     ScrollView {
                         content()
                             .padding(.vertical, 20)
                     }
-                    .frame(idealHeight: .infinity, maxHeight: .infinity, alignment: .top)
+                    .frame(maxHeight: .infinity, alignment: .top)
                 }
                 .frame(maxHeight: maxHeight)
-                .background(.white)
+                .background(Color(UIColor.systemBackground))
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
-                .offset(y: isPresented ? dragOffset : geometry.size.height)
+                .offset(y: isPresented ? min(dragOffset, maxHeight) : geometry.size.height)
                 .animation(isDragging ? nil : .spring(response: 0.3), value: isPresented)
                 .gesture(
                     DragGesture()
                         .onChanged { value in
                             isDragging = true
-                            // Only allow dragging down
-                            dragOffset = max(0, value.translation.height)
+                            // Only allow dragging down with a limit to prevent invalid frames
+                            dragOffset = max(0, min(value.translation.height, maxHeight))
                         }
                         .onEnded { value in
                             // Dismiss if dragged more than 1/3 of the way
@@ -73,6 +73,7 @@ struct MenuTray<Content: View>: View {
                         }
                 )
             }
+            .transition(.opacity)
             .opacity(isPresented ? 1 : 0)
             .allowsHitTesting(isPresented)
             .ignoresSafeArea()
