@@ -8,7 +8,7 @@ struct AddCardButton: View {
     var body: some View {
         Menu {
             Button(action: { isShowingDelight = true }) {
-                Label("Add Delight", systemImage: "sparkles")
+                Label("Add Delight", systemImage: "heart.fill")
             }
             
             Button(action: { isShowingMemory = true }) {

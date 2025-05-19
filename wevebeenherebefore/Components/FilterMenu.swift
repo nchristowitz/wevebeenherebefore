@@ -22,7 +22,7 @@ struct FilterMenu: View {
     
     let options: [FilterOption] = [
         FilterOption(title: "Memories", icon: "book", type: .memory),
-        FilterOption(title: "Delights", icon: "sparkles", type: .delight),
+        FilterOption(title: "Delights", icon: "heart.fill", type: .delight),
         FilterOption(title: "Techniques", icon: "figure.mind.and.body", type: .technique),
         FilterOption(title: "Images Only", icon: "photo", type: .imagesOnly),
         FilterOption(title: "Oldest First", icon: "arrow.up.circle", type: .dateOldest)

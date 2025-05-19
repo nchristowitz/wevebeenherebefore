@@ -7,7 +7,7 @@ struct EpisodeButton: View {
     var body: some View {
         Menu {
             Button(action: { isShowingEpisodeFlow = true }) {
-                Label("I'm having an episode", systemImage: "heart.circle")
+                Label("I'm having an episode", systemImage: "tornado")
             }
             
             Button(action: { isShowingEpisodeList = true }) {

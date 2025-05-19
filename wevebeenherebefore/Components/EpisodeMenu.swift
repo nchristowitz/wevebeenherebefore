@@ -9,7 +9,7 @@ struct EpisodeMenu: View {
         VStack(spacing: 12) {
             MenuButton(
                 title: "I'm having an episode",
-                icon: "heart.circle",
+                icon: "tornado",
                 action: {
                     isPresented = false
                     isShowingEpisodeFlow = true

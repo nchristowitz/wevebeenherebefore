@@ -10,7 +10,7 @@ struct AddCardMenu: View {
         VStack(spacing: 12) {
             MenuButton(
                 title: "Add Delight",
-                icon: "sparkles",
+                icon: "heart.fill",
                 action: {
                     isPresented = false
                     isShowingDelight = true
