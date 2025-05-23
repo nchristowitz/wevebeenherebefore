@@ -49,7 +49,13 @@ struct FilterMenu: View {
                     isSelected: selectedFilter == option.type,
                     isFullRounded: true,
                     action: {
-                        selectedFilter = option.type
+                        if selectedFilter == option.type {
+                            // If already selected, deselect it
+                            selectedFilter = nil
+                        } else {
+                            // Otherwise, select it
+                            selectedFilter = option.type
+                        }
                         isPresented = false
                     }
                 )
