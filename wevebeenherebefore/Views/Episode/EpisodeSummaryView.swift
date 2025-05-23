@@ -44,12 +44,14 @@ struct EpisodeSummaryView: View {
     }
     
     // Define the order of prompts
-    private let promptOrder = [
-        "Describe the episode",
-        "How do you think you'll feel about this in 2 weeks?",
-        "How do you think you'll feel about this in 3 months?"
-        // Add any other prompts in the desired order
-    ]
+        private let promptOrder = [
+            "Describe the episode",
+            "How do you think you'll feel tomorrow?",
+            "How do you think you'll feel about this in 2 weeks?",
+            "What's the worst that can happen?",
+            "How about in 3 months?"
+            // The title is handled separately and not shown in the prompts section
+        ]
     
     var body: some View {
         ScrollView {
@@ -68,7 +70,8 @@ struct EpisodeSummaryView: View {
                 // Emotions
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Emotions")
-                        .font(.headline)
+                        .font(.title3)
+                        .fontWeight(.semibold)
                     
                     FlowLayout(spacing: 12) {
                         ForEach(Array(emotions.sorted(by: { $0.value > $1.value })), id: \.key) { emotion, rating in
@@ -89,10 +92,12 @@ struct EpisodeSummaryView: View {
                         if let response = prompts[promptKey] {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(promptKey)
-                                    .font(.headline)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
                                 
                                 Text(response)
                                     .font(.body)
+                                    .foregroundColor(.secondary)
                             }
                         }
                     }

@@ -10,8 +10,10 @@ struct MenuTray<Content: View>: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let maxHeight = geometry.size.height / 2
-            let dragProgress = min(1, max(0, dragOffset / maxHeight))
+            let safeHeight = max(1, geometry.size.height)
+            let maxHeight = safeHeight / 2
+            let safeDragOffset = max(0, dragOffset)
+            let dragProgress = min(1, max(0, safeDragOffset / max(1, maxHeight)))
             let backgroundOpacity = 0.3 * (1 - dragProgress)
             
             ZStack(alignment: .bottom) {

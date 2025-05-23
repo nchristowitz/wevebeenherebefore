@@ -61,31 +61,43 @@ struct EpisodePrompt: Identifiable, Equatable {
     }
     
     static let prompts: [EpisodePrompt] = [
-        EpisodePrompt(
-            id: 0,
-            question: "Describe the episode",
-            placeholder: "Think about future you as you write this, keep it short but detailed enough",
-            isLast: false
-        ),
-        EpisodePrompt(
-            id: 1,
-            question: "How do you think you'll feel about this in 2 weeks?",
-            placeholder: "Try to imagine yourself looking back at this moment",
-            isLast: false
-        ),
-        EpisodePrompt(
-            id: 2,
-            question: "How about in 3 months?",
-            placeholder: "Think about the bigger picture",
-            isLast: false
-        ),
-        EpisodePrompt(
-            id: 3,
-            question: "Let's give this episode a title",
-            placeholder: "Keep it short but recognizable for future you",
-            isLast: true
-        )
-    ]
+            EpisodePrompt(
+                id: 0,
+                question: "Describe the episode",
+                placeholder: "Think about future you as you write this, keep it short but detailed enough",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 1,
+                question: "How do you think you'll feel tomorrow?",
+                placeholder: "Sometimes the immediate future feels scarier than it actually is",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 2,
+                question: "How do you think you'll feel about this in 2 weeks?",
+                placeholder: "Try to imagine yourself looking back at this moment",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 3,
+                question: "What's the worst that can happen?",
+                placeholder: "What's the nuclear option? Play it out in your mind.",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 4,
+                question: "How about in 3 months?",
+                placeholder: "Think about the bigger picture",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 5,
+                question: "Let's give this episode a title",
+                placeholder: "Keep it short but recognizable for future you",
+                isLast: true
+            )
+        ]
 }
 
 #Preview {

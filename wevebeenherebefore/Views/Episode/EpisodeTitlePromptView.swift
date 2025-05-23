@@ -33,7 +33,14 @@ struct EpisodeTitlePromptView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .navigationBarBackButtonHidden(false)
         .onAppear {
-            isFocused = true
+            // Delay focus to avoid keyboard animation issues
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                isFocused = true
+            }
+        }
+        .onDisappear {
+            // Ensure keyboard is dismissed properly
+            isFocused = false
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -48,4 +55,4 @@ struct EpisodeTitlePromptView: View {
             }
         }
     }
-} 
+}
