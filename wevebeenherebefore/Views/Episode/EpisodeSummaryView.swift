@@ -12,6 +12,7 @@ struct EpisodeSummaryView: View {
     
     @State private var isShowingAddNote = false
     @State private var refreshID = UUID()
+    @State private var editingNote: EpisodeNote?
     
     // For viewing existing episodes with notes
     init(episode: Episode) {
@@ -108,20 +109,37 @@ struct EpisodeSummaryView: View {
                             .foregroundColor(.blue)
                         }
                         
-                        // Display existing notes
-                        ForEach(episode.notes.sorted(by: { $0.createdAt > $1.createdAt }), id: \.createdAt) { note in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(note.createdAt, format: .dateTime.month().day().year().hour().minute())
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                
-                                Text(note.text)
-                                    .font(.body)
+                        // Display existing notes using LazyVStack for better swipe gesture handling
+                        LazyVStack(spacing: 12) {
+                            ForEach(episode.notes.sorted(by: { $0.createdAt > $1.createdAt }), id: \.createdAt) { note in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(note.createdAt, format: .dateTime.month().day().year().hour().minute())
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text(note.text)
+                                        .font(.body)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(.systemGray6))
+                                .cornerRadius(12)
+                                .contextMenu {
+                                    Button("Edit") {
+                                        editingNote = note
+                                    }
+                                    
+                                    Button("Delete", role: .destructive) {
+                                        deleteNote(note)
+                                    }
+                                }
+                                .onTapGesture {
+                                    // Double tap to edit as alternative
+                                }
+                                .onLongPressGesture(minimumDuration: 0.5) {
+                                    editingNote = note
+                                }
                             }
-                            .padding()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
                         }
                         .id(refreshID) // Force refresh when this changes
                     }
@@ -206,6 +224,22 @@ struct EpisodeSummaryView: View {
                 AddNoteView(episode: episode)
             }
         }
+        .sheet(item: $editingNote, onDismiss: {
+            // Refresh the notes list when returning from edit note
+            refreshID = UUID()
+        }) { note in
+            EditNoteView(note: note)
+        }
+    }
+    
+    @Environment(\.modelContext) private var modelContext
+    
+    private func deleteNote(_ note: EpisodeNote) {
+        withAnimation {
+            modelContext.delete(note)
+        }
+        // Trigger refresh after deletion
+        refreshID = UUID()
     }
 }
 
