@@ -1,10 +1,3 @@
-//
-//  EditNoteView.swift
-//  wevebeenherebefore
-//
-//  Created by Nicholas Christowitz on 26.05.25.
-//
-
 import SwiftUI
 import SwiftData
 
@@ -33,7 +26,7 @@ struct EditNoteView: View {
                     .scrollContentBackground(.hidden)
                     .font(.body)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                 
                 Spacer()

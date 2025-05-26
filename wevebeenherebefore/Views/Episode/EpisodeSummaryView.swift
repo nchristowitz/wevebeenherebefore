@@ -13,6 +13,8 @@ struct EpisodeSummaryView: View {
     @State private var isShowingAddNote = false
     @State private var refreshID = UUID()
     @State private var editingNote: EpisodeNote?
+    @State private var editingCheckIn: CheckIn?
+    @State private var addingCheckInType: CheckInType?
     
     // For viewing existing episodes with notes
     init(episode: Episode) {
@@ -122,7 +124,7 @@ struct EpisodeSummaryView: View {
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(.systemGray6))
+                                .background(Color(.secondarySystemBackground))
                                 .cornerRadius(12)
                                 .contextMenu {
                                     Button("Edit") {
@@ -139,6 +141,70 @@ struct EpisodeSummaryView: View {
                                 .onLongPressGesture(minimumDuration: 0.5) {
                                     editingNote = note
                                 }
+                            }
+                        }
+                        .id(refreshID) // Force refresh when this changes
+                    }
+                }
+                
+                // Check-ins sections (only show if we have an episode)
+                if let episode = episode {
+                    ForEach(CheckInType.allCases, id: \.self) { checkInType in
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(checkInType.displayName)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                
+                                Spacer()
+                                
+                                if let existingCheckIn = episode.checkIn(for: checkInType) {
+                                    // Show existing check-in, no add button
+                                } else if episode.isCheckInWindowActive(for: checkInType) {
+                                    Button("Add Check-in") {
+                                        addingCheckInType = checkInType
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                }
+                            }
+                            
+                            // Display existing check-in if it exists
+                            if let checkIn = episode.checkIn(for: checkInType) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(checkIn.createdAt, format: .dateTime.month().day().year().hour().minute())
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    
+                                    Text(checkIn.text)
+                                        .font(.body)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(Color(.secondarySystemBackground))
+                                .cornerRadius(12)
+                                .contextMenu {
+                                    Button("Edit") {
+                                        editingCheckIn = checkIn
+                                    }
+                                    
+                                    Button("Delete", role: .destructive) {
+                                        deleteCheckIn(checkIn)
+                                    }
+                                }
+                                .onLongPressGesture(minimumDuration: 0.5) {
+                                    editingCheckIn = checkIn
+                                }
+                            } else if !episode.isCheckInWindowActive(for: checkInType) && shouldShowEmptyCheckInSection(for: checkInType, episode: episode) {
+                                // Show placeholder text for check-ins that aren't available yet
+                                Text(checkInPlaceholderText(for: checkInType, episode: episode))
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color(.secondarySystemBackground).opacity(0.5))
+                                    .cornerRadius(12)
                             }
                         }
                         .id(refreshID) // Force refresh when this changes
@@ -230,6 +296,20 @@ struct EpisodeSummaryView: View {
         }) { note in
             EditNoteView(note: note)
         }
+        .sheet(item: $addingCheckInType, onDismiss: {
+            // Refresh when returning from add check-in
+            refreshID = UUID()
+        }) { checkInType in
+            if let episode = episode {
+                CheckInView(episode: episode, checkInType: checkInType)
+            }
+        }
+        .sheet(item: $editingCheckIn, onDismiss: {
+            // Refresh when returning from edit check-in
+            refreshID = UUID()
+        }) { checkIn in
+            CheckInView(episode: episode!, checkInType: checkIn.checkInType, existingCheckIn: checkIn)
+        }
     }
     
     @Environment(\.modelContext) private var modelContext
@@ -240,6 +320,36 @@ struct EpisodeSummaryView: View {
         }
         // Trigger refresh after deletion
         refreshID = UUID()
+    }
+    
+    private func deleteCheckIn(_ checkIn: CheckIn) {
+        withAnimation {
+            modelContext.delete(checkIn)
+        }
+        // Trigger refresh after deletion
+        refreshID = UUID()
+    }
+    
+    private func shouldShowEmptyCheckInSection(for checkInType: CheckInType, episode: Episode) -> Bool {
+        let targetDate = Calendar.current.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+        let now = Date()
+        
+        // Show the section if the target date hasn't arrived yet, or if it's been more than 24 hours past the target
+        return now < targetDate || now > Calendar.current.date(byAdding: .hour, value: 24, to: targetDate)!
+    }
+    
+    private func checkInPlaceholderText(for checkInType: CheckInType, episode: Episode) -> String {
+        let targetDate = Calendar.current.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+        let now = Date()
+        
+        if now < targetDate {
+            let formatter = RelativeDateTimeFormatter()
+            formatter.unitsStyle = .full
+            let timeUntil = formatter.localizedString(for: targetDate, relativeTo: now)
+            return "Check-in available \(timeUntil)"
+        } else {
+            return "Check-in window has passed"
+        }
     }
 }
 
@@ -304,5 +414,5 @@ extension CGPoint {
     return NavigationStack {
         EpisodeSummaryView(episode: episode)
     }
-    .modelContainer(for: [Episode.self, EpisodeNote.self], inMemory: true)
+    .modelContainer(for: [Episode.self, EpisodeNote.self, CheckIn.self], inMemory: true)
 }
