@@ -34,7 +34,7 @@ struct StandardPromptView: View {
                     .scrollContentBackground(.hidden)
                     .font(.body)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     .frame(height: 80)
             } else {
@@ -44,7 +44,7 @@ struct StandardPromptView: View {
                     .scrollContentBackground(.hidden)
                     .font(.body)
                     .padding()
-                    .background(Color(.systemGray6))
+                    .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     .frame(minHeight: 200)
             }

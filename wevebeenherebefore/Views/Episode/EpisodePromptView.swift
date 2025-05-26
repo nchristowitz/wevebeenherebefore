@@ -23,7 +23,7 @@ struct EpisodePromptView: View {
                 .scrollContentBackground(.hidden)
                 .font(.body)
                 .padding()
-                .background(Color(.systemGray6))
+                .background(Color(.secondarySystemBackground))
                 .cornerRadius(12)
                 
             Spacer()
