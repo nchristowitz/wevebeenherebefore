@@ -9,6 +9,9 @@ final class Episode {
     var prompts: [String: String] // Store prompt title and response
     var createdAt: Date
     
+    @Relationship(deleteRule: .cascade, inverse: \EpisodeNote.episode)
+    var notes: [EpisodeNote] = []
+    
     init(title: String, emotions: [String: Int], prompts: [String: String]) {
         self.title = title
         self.date = Date()
@@ -16,4 +19,4 @@ final class Episode {
         self.prompts = prompts
         self.createdAt = Date()
     }
-} 
+}

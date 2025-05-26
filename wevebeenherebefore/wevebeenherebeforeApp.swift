@@ -14,6 +14,7 @@ struct wevebeenherebeforeApp: App {
         let schema = Schema([
             Card.self,
             Episode.self,
+            EpisodeNote.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 

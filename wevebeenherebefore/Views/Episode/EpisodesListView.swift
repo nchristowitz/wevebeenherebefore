@@ -25,12 +25,7 @@ struct EpisodesListView: View {
                 .onDelete(perform: deleteEpisodes)
             }
             .navigationDestination(for: Episode.self) { episode in
-                EpisodeSummaryView(
-                    emotions: episode.emotions,
-                    prompts: episode.prompts,
-                    title: episode.title,
-                    onSave: {}
-                )
+                EpisodeSummaryView(episode: episode)
             }
             .navigationTitle("My Episodes")
             .toolbar {
@@ -50,4 +45,4 @@ struct EpisodesListView: View {
             }
         }
     }
-} 
+}

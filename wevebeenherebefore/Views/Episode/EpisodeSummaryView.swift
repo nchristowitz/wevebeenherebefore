@@ -1,11 +1,35 @@
 import SwiftUI
+import SwiftData
 
 struct EpisodeSummaryView: View {
     @Environment(\.dismiss) private var dismiss
-    let emotions: [String: Int]
-    let prompts: [String: String]
-    let title: String
-    let onSave: () -> Void
+    
+    private let emotions: [String: Int]
+    private let prompts: [String: String]
+    private let title: String
+    private let episode: Episode?
+    private let onSave: (() -> Void)?
+    
+    @State private var isShowingAddNote = false
+    @State private var refreshID = UUID()
+    
+    // For viewing existing episodes with notes
+    init(episode: Episode) {
+        self.emotions = episode.emotions
+        self.prompts = episode.prompts
+        self.title = episode.title
+        self.episode = episode
+        self.onSave = nil
+    }
+    
+    // For standalone usage (like from episode flow)
+    init(emotions: [String: Int], prompts: [String: String], title: String, onSave: @escaping () -> Void) {
+        self.emotions = emotions
+        self.prompts = prompts
+        self.title = title
+        self.episode = nil
+        self.onSave = onSave
+    }
     
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -44,27 +68,63 @@ struct EpisodeSummaryView: View {
     }
     
     // Define the order of prompts
-        private let promptOrder = [
-            "Describe the episode",
-            "How do you think you'll feel tomorrow?",
-            "How do you think you'll feel about this in 2 weeks?",
-            "What's the worst that can happen?",
-            "How about in 3 months?"
-            // The title is handled separately and not shown in the prompts section
-        ]
+    private let promptOrder = [
+        "Describe the episode",
+        "How do you think you'll feel tomorrow?",
+        "How do you think you'll feel about this in 2 weeks?",
+        "What's the worst that can happen?",
+        "How about in 3 months?"
+        // The title is handled separately and not shown in the prompts section
+    ]
     
     var body: some View {
-        ScrollView {
+        ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 24) {
                 // Date and Title
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(dateFormatter.string(from: Date()))
+                    Text(dateFormatter.string(from: episode?.date ?? Date()))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                     
                     Text(title)
                         .font(.title)
                         .fontWeight(.bold)
+                }
+                
+                // Notes section (only show if we have an episode)
+                if let episode = episode {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Notes")
+                                .font(.title3)
+                                .fontWeight(.semibold)
+                            
+                            Spacer()
+                            
+                            Button("Add Note") {
+                                isShowingAddNote = true
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                        }
+                        
+                        // Display existing notes
+                        ForEach(episode.notes.sorted(by: { $0.createdAt > $1.createdAt }), id: \.createdAt) { note in
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(note.createdAt, format: .dateTime.month().day().year().hour().minute())
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                
+                                Text(note.text)
+                                    .font(.body)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                        }
+                        .id(refreshID) // Force refresh when this changes
+                    }
                 }
                 
                 // Emotions
@@ -120,19 +180,30 @@ struct EpisodeSummaryView: View {
             }
             .padding()
         }
-        .navigationBarBackButtonHidden(true)
+        .navigationBarBackButtonHidden(onSave != nil)
         .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button("Back") {
-                    dismiss()
+            // Only show custom back button for episode creation flow (when onSave exists)
+            if let onSave = onSave {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Back") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        onSave()
+                    }
+                    .fontWeight(.medium)
                 }
             }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("Save") {
-                    onSave()
-                }
-                .fontWeight(.medium)
+        }
+        .sheet(isPresented: $isShowingAddNote, onDismiss: {
+            // Refresh the notes list when returning from add note
+            refreshID = UUID()
+        }) {
+            if let episode = episode {
+                AddNoteView(episode: episode)
             }
         }
     }
@@ -185,22 +256,19 @@ extension CGPoint {
 }
 
 #Preview {
-    NavigationStack {
-        EpisodeSummaryView(
-            emotions: [
-                "Anger": 5,
-                "Sadness": 3,
-                "Fear": 2,
-                "Anxiety": 4
-            ],
-            prompts: [
-                "Describe the episode": "I felt overwhelmed at work when...",
-                "What triggered it?": "A deadline was moved up unexpectedly",
-                "What do you need right now?": "Some time to breathe and reorganize",
-                "Let's give this episode a title": "Unexpected deadline change"
-            ],
-            title: "Unexpected deadline change",
-            onSave: {}
-        )
+    let episode = Episode(
+        title: "Test Episode",
+        emotions: ["Anger": 5, "Sadness": 3, "Fear": 2, "Anxiety": 4],
+        prompts: [
+            "Describe the episode": "I felt overwhelmed at work when...",
+            "What triggered it?": "A deadline was moved up unexpectedly",
+            "What do you need right now?": "Some time to breathe and reorganize",
+            "Let's give this episode a title": "Unexpected deadline change"
+        ]
+    )
+    
+    return NavigationStack {
+        EpisodeSummaryView(episode: episode)
     }
-} 
+    .modelContainer(for: [Episode.self, EpisodeNote.self], inMemory: true)
+}
