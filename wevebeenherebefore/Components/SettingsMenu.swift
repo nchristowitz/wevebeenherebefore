@@ -82,8 +82,13 @@ struct FlowingFilterButtons: View {
     @Binding var selectedFilter: FilterType?
     let onSelection: () -> Void
     
+    // Native SwiftUI adaptive grid
+    let columns = [
+        GridItem(.adaptive(minimum: 120), spacing: 8)
+    ]
+    
     var body: some View {
-        FlowLayout(spacing: 8) {
+        LazyVGrid(columns: columns, spacing: 8) {
             ForEach(options) { option in
                 Button(action: {
                     if selectedFilter == option.type {
@@ -101,6 +106,7 @@ struct FlowingFilterButtons: View {
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
                     .background(selectedFilter == option.type ? Color.blue.opacity(0.1) : Color(.systemGray6))
                     .foregroundColor(selectedFilter == option.type ? .blue : .primary)
                     .cornerRadius(16)
