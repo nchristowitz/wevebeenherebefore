@@ -69,7 +69,7 @@ struct ResilienceView: View {
                 
                     // Bottom buttons
                     HStack(spacing: 24) {
-                        CircularButton(systemImage: "line.3.horizontal.decrease") {
+                        CircularButton(systemImage: "gearshape") {
                             isShowingFilterMenu = true
                         }
                         
@@ -87,8 +87,8 @@ struct ResilienceView: View {
                 }
                 
                 // Menu trays (always in view hierarchy)
-                MenuTray(title: "Filter by", isPresented: $isShowingFilterMenu) {
-                    FilterMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
+                MenuTray(title: "Settings", isPresented: $isShowingFilterMenu) {
+                    SettingsMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
                 }
                 
                 MenuTray(title: "Add a resilience card", isPresented: $isShowingAddMenu) {

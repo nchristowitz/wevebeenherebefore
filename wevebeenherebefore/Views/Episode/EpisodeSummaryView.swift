@@ -41,12 +41,6 @@ struct EpisodeSummaryView: View {
         return formatter
     }()
     
-    private func fontSizeForRating(_ rating: Int) -> CGFloat {
-        let baseFontSize: CGFloat = 14
-        let scaleFactor: CGFloat = 1.5
-        return baseFontSize * pow(scaleFactor, CGFloat(rating - 1))
-    }
-    
     private func colorForEmotion(_ emotion: String) -> Color {
         switch emotion {
         case "Anger":
@@ -211,28 +205,33 @@ struct EpisodeSummaryView: View {
                     }
                 }
                 
+                Divider()
+                
                 // Emotions
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Emotions")
                         .font(.title3)
                         .fontWeight(.semibold)
                     
-                    FlowLayout(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 12) {
                         ForEach(Array(emotions.sorted(by: { $0.value > $1.value })), id: \.key) { emotion, rating in
                             if rating > 0 {
-                                Text(emotion)
-                                    .font(.system(size: fontSizeForRating(rating)))
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(colorForEmotion(emotion))
+                                EmotionBarView(emotion: emotion, rating: rating, color: colorForEmotion(emotion))
                             }
                         }
                     }
                 }
                 
+                Divider()
+                
                 // Prompts and Responses in desired order
                 VStack(alignment: .leading, spacing: 24) {
                     // First, show prompts in the defined order (if they exist)
-                    ForEach(promptOrder, id: \.self) { promptKey in
+                    let orderedPrompts = promptOrder.compactMap { promptKey in
+                        prompts[promptKey] != nil ? promptKey : nil
+                    }
+                    
+                    ForEach(Array(orderedPrompts.enumerated()), id: \.offset) { index, promptKey in
                         if let response = prompts[promptKey] {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(promptKey)
@@ -243,13 +242,24 @@ struct EpisodeSummaryView: View {
                                     .font(.body)
                                     .foregroundColor(.secondary)
                             }
+                            
+                            // Add divider after each prompt except the last one
+                            if index < orderedPrompts.count - 1 {
+                                Divider()
+                            }
                         }
                     }
                     
                     // Then show any remaining prompts (except the title prompt)
-                    ForEach(Array(prompts.keys.sorted()).filter { key in
+                    let remainingPrompts = Array(prompts.keys.sorted()).filter { key in
                         key != "Let's give this episode a title" && !promptOrder.contains(key)
-                    }, id: \.self) { promptKey in
+                    }
+                    
+                    if !remainingPrompts.isEmpty && !orderedPrompts.isEmpty {
+                        Divider()
+                    }
+                    
+                    ForEach(Array(remainingPrompts.enumerated()), id: \.offset) { index, promptKey in
                         if let response = prompts[promptKey] {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(promptKey)
@@ -257,6 +267,11 @@ struct EpisodeSummaryView: View {
                                 
                                 Text(response)
                                     .font(.body)
+                            }
+                            
+                            // Add divider after each remaining prompt except the last one
+                            if index < remainingPrompts.count - 1 {
+                                Divider()
                             }
                         }
                     }
@@ -394,49 +409,32 @@ struct EpisodeSummaryView: View {
     }
 }
 
-// Helper view for flowing emotion tags
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
+struct EmotionBarView: View {
+    let emotion: String
+    let rating: Int
+    let color: Color
     
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        return arrangeSubviews(sizes: sizes, proposal: proposal).size
-    }
-    
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        let offsets = arrangeSubviews(sizes: sizes, proposal: proposal).offsets
-        
-        for (offset, subview) in zip(offsets, subviews) {
-            subview.place(at: bounds.origin + offset, proposal: .unspecified)
-        }
-    }
-    
-    private func arrangeSubviews(sizes: [CGSize], proposal: ProposedViewSize) -> (offsets: [CGPoint], size: CGSize) {
-        let width = proposal.width ?? .infinity
-        var offsets: [CGPoint] = []
-        var currentPosition = CGPoint.zero
-        var maxY: CGFloat = 0
-        
-        for size in sizes {
-            if currentPosition.x + size.width > width && currentPosition.x > 0 {
-                currentPosition.x = 0
-                currentPosition.y = maxY + spacing
-            }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(emotion)
+                .font(.subheadline)
+                .fontWeight(.medium)
             
-            offsets.append(currentPosition)
-            currentPosition.x += size.width + spacing
-            maxY = max(maxY, currentPosition.y + size.height)
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background bar
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(.systemGray5))
+                        .frame(height: 8)
+                    
+                    // Filled bar
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(color)
+                        .frame(width: geometry.size.width * (CGFloat(rating) / 5.0), height: 8)
+                }
+            }
+            .frame(height: 8)
         }
-        
-        return (offsets, CGSize(width: width, height: maxY))
-    }
-}
-
-// Replace the operator overload with an extension
-extension CGPoint {
-    static func + (left: CGPoint, right: CGPoint) -> CGPoint {
-        return CGPoint(x: left.x + right.x, y: left.y + right.y)
     }
 }
 
