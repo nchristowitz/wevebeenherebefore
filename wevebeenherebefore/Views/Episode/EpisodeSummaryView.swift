@@ -331,24 +331,59 @@ struct EpisodeSummaryView: View {
     }
     
     private func shouldShowEmptyCheckInSection(for checkInType: CheckInType, episode: Episode) -> Bool {
-        let targetDate = Calendar.current.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+        let calendar = Calendar.current
         let now = Date()
         
-        // Show the section if the target date hasn't arrived yet, or if it's been more than 24 hours past the target
-        return now < targetDate || now > Calendar.current.date(byAdding: .hour, value: 24, to: targetDate)!
+        switch checkInType {
+        case .twentyFourHour:
+            // Show section if it's not the day after the episode
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: episode.date),
+                  let startOfNextDay = calendar.dateInterval(of: .day, for: nextDay)?.start,
+                  let endOfNextDay = calendar.dateInterval(of: .day, for: nextDay)?.end else { return true }
+            return now < startOfNextDay || now >= endOfNextDay
+            
+        case .twoWeek, .threeMonth:
+            let targetDate = calendar.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+            // Show the section if the target date hasn't arrived yet, or if it's been more than 24 hours past the target
+            return now < targetDate || now > calendar.date(byAdding: .hour, value: 24, to: targetDate)!
+        }
     }
     
     private func checkInPlaceholderText(for checkInType: CheckInType, episode: Episode) -> String {
-        let targetDate = Calendar.current.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+        let calendar = Calendar.current
         let now = Date()
         
-        if now < targetDate {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            let timeUntil = formatter.localizedString(for: targetDate, relativeTo: now)
-            return "Check-in available \(timeUntil)"
-        } else {
-            return "Check-in window has passed"
+        switch checkInType {
+        case .twentyFourHour:
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: episode.date),
+                  let startOfNextDay = calendar.dateInterval(of: .day, for: nextDay)?.start else {
+                return "Check-in window has passed"
+            }
+            
+            if now < startOfNextDay {
+                if calendar.isDate(now, inSameDayAs: episode.date) {
+                    return "Check-in available tomorrow"
+                } else {
+                    let formatter = RelativeDateTimeFormatter()
+                    formatter.unitsStyle = .full
+                    let timeUntil = formatter.localizedString(for: startOfNextDay, relativeTo: now)
+                    return "Check-in available \(timeUntil)"
+                }
+            } else {
+                return "Check-in window has passed"
+            }
+            
+        case .twoWeek, .threeMonth:
+            let targetDate = calendar.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
+            
+            if now < targetDate {
+                let formatter = RelativeDateTimeFormatter()
+                formatter.unitsStyle = .full
+                let timeUntil = formatter.localizedString(for: targetDate, relativeTo: now)
+                return "Check-in available \(timeUntil)"
+            } else {
+                return "Check-in window has passed"
+            }
         }
     }
 }
