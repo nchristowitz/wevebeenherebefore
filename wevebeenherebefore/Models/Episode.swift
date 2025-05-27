@@ -8,6 +8,7 @@ final class Episode {
     var emotions: [String: Int] // Store emotion name and rating
     var prompts: [String: String] // Store prompt title and response
     var createdAt: Date
+    var notificationIDs: [String] = [] // Store notification IDs for cleanup
     
     @Relationship(deleteRule: .cascade, inverse: \EpisodeNote.episode)
     var notes: [EpisodeNote] = []
@@ -54,5 +55,23 @@ final class Episode {
     
     func checkIn(for type: CheckInType) -> CheckIn? {
         return checkIns.first { $0.checkInType == type }
+    }
+    
+    // Notification management methods
+    func scheduleNotifications() {
+        let ids = NotificationManager.shared.scheduleCheckInNotifications(for: self)
+        self.notificationIDs = ids
+    }
+    
+    func cancelAllNotifications() {
+        NotificationManager.shared.cancelAllNotifications(for: self)
+        self.notificationIDs = []
+    }
+    
+    func cancelNotificationForCheckIn(_ checkInType: CheckInType) {
+        NotificationManager.shared.cancelNotificationForCheckIn(episode: self, checkInType: checkInType)
+        // Remove the specific notification ID from our list
+        let notificationID = "\(self.persistentModelID)_\(checkInType.rawValue)"
+        notificationIDs.removeAll { $0 == notificationID }
     }
 }

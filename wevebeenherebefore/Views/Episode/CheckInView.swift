@@ -98,6 +98,9 @@ struct CheckInView: View {
         } else {
             let checkIn = CheckIn(text: trimmedText, checkInType: checkInType, episode: episode)
             modelContext.insert(checkIn)
+            
+            // Cancel the notification for this check-in type
+            episode.cancelNotificationForCheckIn(checkInType)
         }
         
         dismiss()

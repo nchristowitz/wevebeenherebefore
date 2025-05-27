@@ -328,6 +328,12 @@ struct EpisodeSummaryView: View {
         }
         // Trigger refresh after deletion
         refreshID = UUID()
+        
+        // If the check-in is deleted, we might want to reschedule the notification
+        // (in case user wants another chance to add the check-in)
+        if let episode = episode {
+            episode.scheduleNotifications()
+        }
     }
     
     private func shouldShowEmptyCheckInSection(for checkInType: CheckInType, episode: Episode) -> Bool {

@@ -166,10 +166,22 @@ struct EpisodeFlowCoordinator: View {
             prompts: state.responses
         )
         modelContext.insert(episode)
+        
+        // Schedule notifications for check-ins
+        Task {
+            await NotificationManager.shared.checkPermission()
+            if !NotificationManager.shared.hasPermission {
+                await NotificationManager.shared.requestPermission()
+            }
+            
+            if NotificationManager.shared.hasPermission {
+                episode.scheduleNotifications()
+            }
+        }
     }
 }
 
 #Preview {
     EpisodeFlowCoordinator()
         .modelContainer(for: Episode.self, inMemory: true)
-} 
+}

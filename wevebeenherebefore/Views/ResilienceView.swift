@@ -135,6 +135,12 @@ struct ResilienceView: View {
                 }
             }
         }
+        .onAppear {
+            // Check notification permissions on app launch
+            Task {
+                await NotificationManager.shared.checkPermission()
+            }
+        }
     }
 }
 
@@ -220,4 +226,4 @@ struct AddCardMenuView: View {
 #Preview {
     ResilienceView()
         .modelContainer(for: Card.self, inMemory: true)
-} 
+}

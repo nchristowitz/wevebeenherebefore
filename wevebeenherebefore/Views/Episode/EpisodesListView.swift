@@ -41,7 +41,10 @@ struct EpisodesListView: View {
     private func deleteEpisodes(offsets: IndexSet) {
         withAnimation {
             for index in offsets {
-                modelContext.delete(episodes[index])
+                let episode = episodes[index]
+                // Cancel all notifications for this episode before deleting
+                episode.cancelAllNotifications()
+                modelContext.delete(episode)
             }
         }
     }
