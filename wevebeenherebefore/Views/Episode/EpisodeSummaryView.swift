@@ -64,7 +64,7 @@ struct EpisodeSummaryView: View {
         }
     }
     
-    // Define the order of prompts
+    // Define the order of prompts and their associated check-ins
     private let promptOrder = [
         "Describe the episode",
         "How do you think you'll feel tomorrow?",
@@ -72,6 +72,13 @@ struct EpisodeSummaryView: View {
         "What's the worst that can happen?",
         "How about in 3 months?"
         // The title is handled separately and not shown in the prompts section
+    ]
+    
+    // Map prompts to their associated check-in types
+    private let promptToCheckIn: [String: CheckInType] = [
+        "How do you think you'll feel tomorrow?": .twentyFourHour,
+        "How do you think you'll feel about this in 2 weeks?": .twoWeek,
+        "How about in 3 months?": .threeMonth
     ]
     
     var body: some View {
@@ -141,70 +148,6 @@ struct EpisodeSummaryView: View {
                     }
                 }
                 
-                // Check-ins sections (only show if we have an episode)
-                if let episode = episode {
-                    ForEach(CheckInType.allCases, id: \.self) { checkInType in
-                        VStack(alignment: .leading, spacing: 12) {
-                            HStack {
-                                Text(checkInType.displayName)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                
-                                Spacer()
-                                
-                                if let existingCheckIn = episode.checkIn(for: checkInType) {
-                                    // Show existing check-in, no add button
-                                } else if episode.isCheckInWindowActive(for: checkInType) {
-                                    Button("Add Check-in") {
-                                        addingCheckInType = checkInType
-                                    }
-                                    .font(.subheadline)
-                                    .foregroundColor(.blue)
-                                }
-                            }
-                            
-                            // Display existing check-in if it exists
-                            if let checkIn = episode.checkIn(for: checkInType) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(checkIn.createdAt, format: .dateTime.month().day().year().hour().minute())
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    
-                                    Text(checkIn.text)
-                                        .font(.body)
-                                }
-                                .padding()
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(12)
-                                .contextMenu {
-                                    Button("Edit") {
-                                        editingCheckIn = checkIn
-                                    }
-                                    
-                                    Button("Delete", role: .destructive) {
-                                        deleteCheckIn(checkIn)
-                                    }
-                                }
-                                .onLongPressGesture(minimumDuration: 0.5) {
-                                    editingCheckIn = checkIn
-                                }
-                            } else if !episode.isCheckInWindowActive(for: checkInType) && shouldShowEmptyCheckInSection(for: checkInType, episode: episode) {
-                                // Show placeholder text for check-ins that aren't available yet
-                                Text(checkInPlaceholderText(for: checkInType, episode: episode))
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                                    .italic()
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color(.secondarySystemBackground).opacity(0.5))
-                                    .cornerRadius(12)
-                            }
-                        }
-                        .id(refreshID) // Force refresh when this changes
-                    }
-                }
-                
                 Divider()
                 
                 // Emotions
@@ -241,6 +184,69 @@ struct EpisodeSummaryView: View {
                                 Text(response)
                                     .font(.body)
                                     .foregroundColor(.secondary)
+                                
+                                // Add check-in section if this prompt has an associated check-in
+                                if let checkInType = promptToCheckIn[promptKey], let episode = episode {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        HStack {
+                                            Text(checkInType.displayName)
+                                                .font(.headline)  // Smaller than title3
+                                                .fontWeight(.medium)  // Less bold than semibold
+                                            
+                                            Spacer()
+                                            
+                                            if let existingCheckIn = episode.checkIn(for: checkInType) {
+                                                // Show existing check-in, no add button
+                                            } else if episode.isCheckInWindowActive(for: checkInType) {
+                                                Button("Add Check-in") {
+                                                    addingCheckInType = checkInType
+                                                }
+                                                .font(.subheadline)
+                                                .foregroundColor(.blue)
+                                            }
+                                        }
+                                        .padding(.top, 8)
+                                        
+                                        // Display existing check-in if it exists
+                                        if let checkIn = episode.checkIn(for: checkInType) {
+                                            VStack(alignment: .leading, spacing: 8) {
+                                                Text(checkIn.createdAt, format: .dateTime.month().day().year().hour().minute())
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                                
+                                                Text(checkIn.text)
+                                                    .font(.body)
+                                            }
+                                            .padding()
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .background(Color(.secondarySystemBackground))
+                                            .cornerRadius(12)
+                                            .contextMenu {
+                                                Button("Edit") {
+                                                    editingCheckIn = checkIn
+                                                }
+                                                
+                                                Button("Delete", role: .destructive) {
+                                                    deleteCheckIn(checkIn)
+                                                }
+                                            }
+                                            .onLongPressGesture(minimumDuration: 0.5) {
+                                                editingCheckIn = checkIn
+                                            }
+                                        } else if !episode.isCheckInWindowActive(for: checkInType) && shouldShowEmptyCheckInSection(for: checkInType, episode: episode) {
+                                            // Show placeholder text for check-ins that aren't available yet
+                                            Text(checkInPlaceholderText(for: checkInType, episode: episode))
+                                                .font(.body)
+                                                .foregroundColor(.secondary)
+                                                .italic()
+                                                .padding()
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .background(Color(.secondarySystemBackground).opacity(0.5))
+                                                .cornerRadius(12)
+                                        }
+                                    }
+                                    .id(refreshID) // Force refresh when this changes
+                                }
                             }
                             
                             // Add divider after each prompt except the last one
