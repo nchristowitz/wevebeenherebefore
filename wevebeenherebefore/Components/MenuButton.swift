@@ -30,7 +30,7 @@ struct MenuButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(isSelected ? Color.blue.opacity(0.1) : Color(.systemGray6))
+            .background(isSelected ? Color.blue.opacity(0.1) : Color(.secondarySystemGroupedBackground))
             .foregroundColor(isSelected ? .blue : .primary)
             .cornerRadius(isFullRounded ? 24 : 12)
         }

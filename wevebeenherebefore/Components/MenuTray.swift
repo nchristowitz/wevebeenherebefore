@@ -30,7 +30,7 @@ struct MenuTray<Content: View>: View {
                     // Header with drag indicator
                     VStack(spacing: 8) {
                         RoundedRectangle(cornerRadius: 2.5)
-                            .fill(Color.secondary.opacity(0.1))
+                            .fill(Color.secondary.opacity(0.5))
                             .frame(width: 36, height: 5)
                             .padding(.top, 8)
                         
@@ -39,7 +39,6 @@ struct MenuTray<Content: View>: View {
                             .padding(.bottom, 8)
                     }
                     .frame(maxWidth: .infinity)
-                    .background(Color(UIColor.systemBackground))
                     
                     // Content
                     ScrollView {
@@ -49,7 +48,7 @@ struct MenuTray<Content: View>: View {
                     .frame(maxHeight: .infinity, alignment: .top)
                 }
                 .frame(maxHeight: maxHeight)
-                .background(Color(UIColor.systemBackground))
+                .background(.thickMaterial)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
                 .offset(y: isPresented ? min(dragOffset, maxHeight) : geometry.size.height)

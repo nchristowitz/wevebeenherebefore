@@ -46,10 +46,10 @@ struct EmotionRatingView: View {
             }) {
                 Text("Next")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(.systemBackground))
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.black)
+                    .background(Color.primary)
                     .cornerRadius(12)
             }
             .padding()
@@ -84,10 +84,10 @@ struct EmotionRatingRow: View {
                 HStack(spacing: spacing) {
                     ForEach(1...5, id: \.self) { value in
                         Circle()
-                            .fill(rating >= value ? Color.black : Color.black.opacity(0.1))
+                            .fill(rating >= value ? Color.primary : Color.primary.opacity(0.1))
                             .overlay(
                                 Text("\(value)")
-                                    .foregroundColor(rating >= value ? .white : .black)
+                                    .foregroundColor(rating >= value ? Color(.systemBackground) : Color.primary)
                             )
                             .frame(width: circleSize, height: circleSize)
                             .onTapGesture {
@@ -98,7 +98,7 @@ struct EmotionRatingRow: View {
                     }
                 }
             }
-            .frame(height: 60) // Fixed height instead of calculation
+            .frame(height: 60)
         }
     }
 }

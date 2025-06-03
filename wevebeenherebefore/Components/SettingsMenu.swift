@@ -54,20 +54,13 @@ struct SettingsMenu: View {
                     .font(.headline)
                     .fontWeight(.semibold)
                 
-                Button(action: {
-                    isShowingExport = true
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16))
-                        Text("Export Data")
+                MenuButton(
+                    title: "Export Data",
+                    icon: "square.and.arrow.up",
+                    action: {
+                        isShowingExport = true
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(.systemGray6))
-                    .foregroundColor(.primary)
-                    .cornerRadius(8)
-                }
+                )
             }
         }
         .padding(.horizontal)
@@ -98,16 +91,16 @@ struct FlowingFilterButtons: View {
                     }
                     onSelection()
                 }) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 8  ) {
                         Image(systemName: option.icon)
                             .font(.system(size: 14))
                         Text(option.title)
                             .font(.subheadline)
                     }
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 16)
                     .frame(maxWidth: .infinity)
-                    .background(selectedFilter == option.type ? Color.blue.opacity(0.1) : Color(.systemGray6))
+                    .background(selectedFilter == option.type ? Color.blue.opacity(0.1) : Color(.secondarySystemGroupedBackground))
                     .foregroundColor(selectedFilter == option.type ? .blue : .primary)
                     .cornerRadius(16)
                 }
