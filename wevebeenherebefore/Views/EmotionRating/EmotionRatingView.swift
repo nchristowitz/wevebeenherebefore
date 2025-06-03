@@ -103,10 +103,3 @@ struct EmotionRatingRow: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        EmotionRatingView { emotions in
-            print(emotions)
-        }
-    }
-} 

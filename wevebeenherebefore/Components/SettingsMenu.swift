@@ -10,6 +10,7 @@ struct SettingsMenu: View {
     @Binding var selectedFilter: FilterType?
     @Binding var isPresented: Bool
     @State private var isShowingExport = false
+    @State private var isShowingImport = false
     
     let filterOptions: [FilterOption] = [
         FilterOption(title: "Memories", icon: "book", type: .memory),
@@ -61,11 +62,22 @@ struct SettingsMenu: View {
                         isShowingExport = true
                     }
                 )
+                
+                MenuButton(
+                    title: "Import Data",
+                    icon: "square.and.arrow.down",
+                    action: {
+                        isShowingImport = true
+                    }
+                )
             }
         }
         .padding(.horizontal)
         .sheet(isPresented: $isShowingExport) {
             ExportView()
+        }
+        .sheet(isPresented: $isShowingImport) {
+            ImportView()
         }
     }
 }
