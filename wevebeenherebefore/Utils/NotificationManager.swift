@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 import UserNotifications
 
 /// Represents navigation data for a check-in that was triggered from a
