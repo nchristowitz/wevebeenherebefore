@@ -10,7 +10,6 @@ import SwiftData
 
 @main
 struct wevebeenherebeforeApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Card.self,
@@ -30,7 +29,6 @@ struct wevebeenherebeforeApp: App {
     var body: some Scene {
         WindowGroup {
             ResilienceView()
-                .environmentObject(NotificationManager.shared)
         }
         .modelContainer(sharedModelContainer)
     }
