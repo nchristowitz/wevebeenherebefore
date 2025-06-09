@@ -1,12 +1,24 @@
 import Foundation
 import UserNotifications
 
+/// Represents navigation data for a check-in that was triggered from a
+/// notification tap.
+struct CheckInNavigation: Identifiable {
+    let episodeID: String
+    let checkInType: CheckInType
+
+    var id: String { "\(episodeID)_\(checkInType.rawValue)" }
+}
+
 class NotificationManager: ObservableObject {
     static let shared = NotificationManager()
-    
+
     private init() {}
-    
+
     @Published var hasPermission = false
+    // Stores information about a notification that the user tapped so the app
+    // can navigate to the correct check-in screen.
+    @Published var pendingCheckIn: CheckInNavigation?
     
     func requestPermission() async {
         do {
@@ -26,6 +38,22 @@ class NotificationManager: ObservableObject {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         await MainActor.run {
             hasPermission = settings.authorizationStatus == .authorized
+        }
+    }
+
+    /// Called by the `AppDelegate` when a notification is tapped. Stores the
+    /// episode and check‑in information so that the UI can navigate to the
+    /// appropriate screen.
+    func handleNotificationResponse(_ response: UNNotificationResponse) {
+        let info = response.notification.request.content.userInfo
+        guard let episodeID = info["episodeID"] as? String,
+              let rawType = info["checkInType"] as? String,
+              let type = CheckInType(rawValue: rawType) else {
+            return
+        }
+
+        DispatchQueue.main.async {
+            self.pendingCheckIn = CheckInNavigation(episodeID: episodeID, checkInType: type)
         }
     }
     
