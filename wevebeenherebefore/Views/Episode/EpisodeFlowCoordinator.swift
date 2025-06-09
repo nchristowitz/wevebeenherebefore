@@ -167,15 +167,28 @@ struct EpisodeFlowCoordinator: View {
         )
         modelContext.insert(episode)
         
-        // Schedule notifications for check-ins
+        // Enhanced notification scheduling with better error handling
         Task {
+            // Always check permission first
             await NotificationManager.shared.checkPermission()
+            
             if !NotificationManager.shared.hasPermission {
+                // Request permission
                 await NotificationManager.shared.requestPermission()
+                
+                // Check again after request
+                await NotificationManager.shared.checkPermission()
             }
             
             if NotificationManager.shared.hasPermission {
-                episode.scheduleNotifications()
+                let scheduledIDs = NotificationManager.shared.scheduleCheckInNotifications(for: episode)
+                episode.notificationIDs = scheduledIDs
+                print("✅ Scheduled \(scheduledIDs.count) notifications for episode: \(episode.title)")
+                
+                // Debug: Log pending notifications
+                await NotificationManager.shared.logPendingNotifications()
+            } else {
+                print("⚠️ Notifications not scheduled - permission denied")
             }
         }
     }
