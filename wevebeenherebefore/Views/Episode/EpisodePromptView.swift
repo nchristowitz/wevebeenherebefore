@@ -9,14 +9,16 @@ struct EpisodePromptView: View {
     let onNext: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(prompt.question)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text(prompt.placeholder)
-                .font(.body)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(prompt.question)
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Text(prompt.placeholder)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
             
             TextEditor(text: $text)
                 .focused($isFocused)

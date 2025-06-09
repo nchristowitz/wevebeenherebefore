@@ -17,15 +17,17 @@ struct StandardPromptView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(prompt.question)
-                .font(.title)
-                .fontWeight(.bold)
-                .padding(.top)
-            
-            Text(prompt.placeholder)
-                .font(.body)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(prompt.question)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .padding(.top)
+                
+                Text(prompt.placeholder)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
             
             if isFixedHeight {
                 // Fixed height for titles

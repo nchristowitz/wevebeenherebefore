@@ -9,14 +9,16 @@ struct EpisodeTitlePromptView: View {
     let onNext: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(prompt.question)
-                .font(.title)
-                .fontWeight(.bold)
-            
-            Text(prompt.placeholder)
-                .font(.body)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(prompt.question)
+                    .font(.title)
+                    .fontWeight(.bold)
+                
+                Text(prompt.placeholder)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
             
             TextEditor(text: $text)
                 .focused($isFocused)
@@ -25,7 +27,7 @@ struct EpisodeTitlePromptView: View {
                 .padding()
                 .background(Color(.secondarySystemBackground))
                 .cornerRadius(12)
-                .frame(height: 80)
+                .frame(height: 104)
                 
             Spacer()
         }
@@ -54,5 +56,35 @@ struct EpisodeTitlePromptView: View {
                 }
             }
         }
+    }
+}
+
+#Preview("Empty Title") {
+    NavigationStack {
+        EpisodeTitlePromptView(
+            prompt: EpisodePrompt(
+                id: 5,
+                question: "Let's give this episode a title",
+                placeholder: "Keep it short but recognizable for future you",
+                isLast: true
+            ),
+            text: .constant(""),
+            onNext: { }
+        )
+    }
+}
+
+#Preview("With Text") {
+    NavigationStack {
+        EpisodeTitlePromptView(
+            prompt: EpisodePrompt(
+                id: 5,
+                question: "Let's give this episode a title",
+                placeholder: "Keep it short but recognizable for future you",
+                isLast: true
+            ),
+            text: .constant("Overwhelming Deadline Crisis"),
+            onNext: { }
+        )
     }
 }
