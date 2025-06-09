@@ -21,16 +21,18 @@ struct CheckInView: View {
     
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text(isEditing ? "Edit \(checkInType.displayName.lowercased())" : "Add \(checkInType.displayName.lowercased())")
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .padding(.top)
-                
-                Text(placeholderText)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .padding(.bottom, 8)
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(isEditing ? "Edit \(checkInType.displayName.lowercased())" : "Add \(checkInType.displayName.lowercased())")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .padding(.top)
+                    
+                    Text(placeholderText)
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .padding(.bottom, 8)
+                }
                 
                 TextEditor(text: $checkInText)
                     .focused($isFocused)
