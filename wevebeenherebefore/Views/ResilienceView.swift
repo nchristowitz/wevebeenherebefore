@@ -4,6 +4,11 @@ import SwiftData
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
+
+    @EnvironmentObject private var notificationManager: NotificationManager
+
+    // Holds episode and check-in info when a notification is tapped
+    @State private var notificationCheckIn: CheckInSheetData?
     
     @State private var isShowingDelight = false
     @State private var isShowingMemory = false
@@ -134,14 +139,41 @@ struct ResilienceView: View {
                     AddTechniqueView(existingCard: card)
                 }
             }
+            .sheet(item: $notificationCheckIn) { data in
+                CheckInView(
+                    episode: data.episode,
+                    checkInType: data.checkInType,
+                    existingCheckIn: data.episode.checkIn(for: data.checkInType)
+                )
+            }
         }
         .onAppear {
             // Check notification permissions on app launch
             Task {
-                await NotificationManager.shared.checkPermission()
+                await notificationManager.checkPermission()
+            }
+        }
+        .onReceive(notificationManager.$pendingCheckIn.compactMap { $0 }) { info in
+            if let episode = fetchEpisode(with: info.episodeID) {
+                notificationCheckIn = CheckInSheetData(episode: episode, checkInType: info.checkInType)
             }
         }
     }
+
+    private func fetchEpisode(with idString: String) -> Episode? {
+        guard let url = URL(string: idString) else { return nil }
+        let identifier = PersistentIdentifier(urlRepresentation: url)
+        let descriptor = FetchDescriptor<Episode>(predicate: #Predicate { $0.persistentModelID == identifier })
+        return try? modelContext.fetch(descriptor).first
+    }
+}
+
+/// Helper for presenting the check-in view from a notification.
+struct CheckInSheetData: Identifiable {
+    let episode: Episode
+    let checkInType: CheckInType
+
+    var id: String { "\(episode.persistentModelID)_\(checkInType.rawValue)" }
 }
 
 struct CardView: View {
