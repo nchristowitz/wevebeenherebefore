@@ -46,8 +46,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
            let checkInTypeString = userInfo["checkInType"] as? String,
            let checkInType = CheckInType(rawValue: checkInTypeString) {
             
-            // TODO: Navigate to the specific episode check-in
-            print("User tapped notification for episode \(episodeID), check-in: \(checkInType.displayName)")
+            // Use the notification coordinator to handle navigation
+            NotificationCoordinator.shared.handleNotificationTap(
+                episodeID: episodeID,
+                checkInType: checkInType
+            )
         }
         
         completionHandler()

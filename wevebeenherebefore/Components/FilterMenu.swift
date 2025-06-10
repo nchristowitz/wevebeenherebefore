@@ -63,4 +63,30 @@ struct FilterMenu: View {
         }
         .padding(.horizontal)
     }
-} 
+}
+
+// Add this to the bottom of your FilterMenu.swift file
+
+#Preview("No Filter Selected") {
+    FilterMenu(
+        selectedFilter: .constant(nil),
+        isPresented: .constant(true)
+    )
+    .padding()
+}
+
+#Preview("Memory Filter Selected") {
+    FilterMenu(
+        selectedFilter: .constant(.memory),
+        isPresented: .constant(true)
+    )
+    .padding()
+}
+
+#Preview("With Clear Button") {
+    FilterMenu(
+        selectedFilter: .constant(.delight),
+        isPresented: .constant(true)
+    )
+    .padding()
+}

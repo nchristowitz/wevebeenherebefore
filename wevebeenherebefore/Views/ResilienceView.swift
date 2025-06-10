@@ -4,6 +4,7 @@ import SwiftData
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
+    @StateObject private var notificationCoordinator = NotificationCoordinator.shared
     
     @State private var isShowingDelight = false
     @State private var isShowingMemory = false
@@ -15,6 +16,11 @@ struct ResilienceView: View {
     @State private var editingCard: Card?
     @State private var isShowingAddMenu = false
     @State private var isShowingEpisodeMenu = false
+    
+    // Navigation state for deep linking
+    @State private var selectedEpisode: Episode?
+    @State private var checkInToShow: CheckInType?
+    @State private var showingCheckIn = false
     
     var filteredCards: [Card] {
         guard let filter = selectedFilter else { return cards }
@@ -134,12 +140,89 @@ struct ResilienceView: View {
                     AddTechniqueView(existingCard: card)
                 }
             }
+            .navigationDestination(isPresented: $showingCheckIn) {
+                if let episode = selectedEpisode, let checkInType = checkInToShow {
+                    CheckInView(episode: episode, checkInType: checkInType) {
+                        // Called when check-in is completed
+                        showingCheckIn = false
+                        selectedEpisode = nil
+                        checkInToShow = nil
+                        updateBadgeCount()
+                    }
+                }
+            }
         }
         .onAppear {
             // Check notification permissions on app launch
             Task {
                 await NotificationManager.shared.checkPermission()
+                updateBadgeCount()
             }
+        }
+        .onChange(of: notificationCoordinator.pendingNavigation) { _, pendingNav in
+            // Handle deep link navigation from notifications
+            if let navigation = pendingNav {
+                handleNotificationNavigation(navigation)
+                notificationCoordinator.clearPendingNavigation()
+            }
+        }
+    }
+    
+    private func handleNotificationNavigation(_ navigation: NotificationCoordinator.PendingNavigation) {
+        // Find the episode by ID
+        let descriptor = FetchDescriptor<Episode>()
+        
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+            if let episode = episodes.first(where: { "\($0.persistentModelID)" == navigation.episodeID }) {
+                
+                // Check if this check-in already exists
+                let existingCheckIn = episode.checkIns.first { $0.checkInType == navigation.checkInType }
+                
+                if existingCheckIn == nil {
+                    // Navigate to check-in view
+                    selectedEpisode = episode
+                    checkInToShow = navigation.checkInType
+                    showingCheckIn = true
+                    
+                    print("✅ Navigating to check-in: \(navigation.checkInType.displayName) for episode: \(episode.title)")
+                } else {
+                    print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
+                    // Still clear the badge since user interacted with the notification
+                    updateBadgeCount()
+                }
+            } else {
+                print("❌ Episode not found for ID: \(navigation.episodeID)")
+            }
+        } catch {
+            print("❌ Error fetching episodes: \(error)")
+        }
+    }
+    
+    private func updateBadgeCount() {
+        // Count pending check-ins across all episodes
+        let descriptor = FetchDescriptor<Episode>()
+        
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+            var pendingCount = 0
+            
+            for episode in episodes {
+                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
+                for checkInType in CheckInType.allCases {
+                    if !completedCheckInTypes.contains(checkInType) && episode.isCheckInWindowActive(for: checkInType) {
+                        pendingCount += 1
+                    }
+                }
+            }
+            
+            DispatchQueue.main.async {
+                UNUserNotificationCenter.current().setBadgeCount(pendingCount)
+                print("📱 Updated badge count to: \(pendingCount)")
+            }
+        } catch {
+            print("❌ Error updating badge count: \(error)")
+            UNUserNotificationCenter.current().setBadgeCount(0)
         }
     }
 }

@@ -391,10 +391,8 @@ struct EpisodeSummaryView: View {
                 if calendar.isDate(now, inSameDayAs: episode.date) {
                     return "Check-in available tomorrow"
                 } else {
-                    let formatter = RelativeDateTimeFormatter()
-                    formatter.unitsStyle = .full
-                    let timeUntil = formatter.localizedString(for: startOfNextDay, relativeTo: now)
-                    return "Check-in available \(timeUntil)"
+                    let daysUntil = calendar.dateComponents([.day], from: now, to: startOfNextDay).day ?? 0
+                    return "Check-in available in \(daysUntil) days"
                 }
             } else {
                 return "Check-in window has passed"
@@ -404,10 +402,16 @@ struct EpisodeSummaryView: View {
             let targetDate = calendar.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
             
             if now < targetDate {
-                let formatter = RelativeDateTimeFormatter()
-                formatter.unitsStyle = .full
-                let timeUntil = formatter.localizedString(for: targetDate, relativeTo: now)
-                return "Check-in available \(timeUntil)"
+                // Calculate how many days LEFT until the check-in becomes available
+                let daysLeft = calendar.dateComponents([.day], from: now, to: targetDate).day ?? 0
+                
+                if daysLeft <= 0 {
+                    return "Check-in available now"
+                } else if daysLeft == 1 {
+                    return "Check-in available tomorrow"
+                } else {
+                    return "Check-in available in \(daysLeft) days"
+                }
             } else {
                 return "Check-in window has passed"
             }

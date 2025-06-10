@@ -9,13 +9,15 @@ struct CheckInView: View {
     let episode: Episode
     let checkInType: CheckInType
     let existingCheckIn: CheckIn?
+    let onCompletion: (() -> Void)?
     
     @State private var checkInText: String = ""
     
-    init(episode: Episode, checkInType: CheckInType, existingCheckIn: CheckIn? = nil) {
+    init(episode: Episode, checkInType: CheckInType, existingCheckIn: CheckIn? = nil, onCompletion: (() -> Void)? = nil) {
         self.episode = episode
         self.checkInType = checkInType
         self.existingCheckIn = existingCheckIn
+        self.onCompletion = onCompletion
         _checkInText = State(initialValue: existingCheckIn?.text ?? "")
     }
     
@@ -50,6 +52,7 @@ struct CheckInView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        onCompletion?()
                         dismiss()
                     }
                 }
@@ -105,6 +108,7 @@ struct CheckInView: View {
             episode.cancelNotificationForCheckIn(checkInType)
         }
         
+        onCompletion?()
         dismiss()
     }
 }
