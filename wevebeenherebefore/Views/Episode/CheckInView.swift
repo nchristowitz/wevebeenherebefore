@@ -106,6 +106,13 @@ struct CheckInView: View {
             
             // Cancel the notification for this check-in type
             episode.cancelNotificationForCheckIn(checkInType)
+            
+            // Update badge count
+            Task {
+                await MainActor.run {
+                    UNUserNotificationCenter.current().setBadgeCount(0)
+                }
+            }
         }
         
         onCompletion?()

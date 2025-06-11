@@ -42,6 +42,9 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
         
+        // Clear badge immediately when notification is tapped
+        UNUserNotificationCenter.current().setBadgeCount(0)
+        
         if let episodeID = userInfo["episodeID"] as? String,
            let checkInTypeString = userInfo["checkInType"] as? String,
            let checkInType = CheckInType(rawValue: checkInTypeString) {

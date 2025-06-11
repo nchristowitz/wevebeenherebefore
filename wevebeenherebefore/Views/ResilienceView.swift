@@ -4,8 +4,8 @@ import SwiftData
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
-    @StateObject private var notificationCoordinator = NotificationCoordinator.shared
-    
+    @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
+
     @State private var isShowingDelight = false
     @State private var isShowingMemory = false
     @State private var isShowingTechnique = false
@@ -140,7 +140,7 @@ struct ResilienceView: View {
                     AddTechniqueView(existingCard: card)
                 }
             }
-            .navigationDestination(isPresented: $showingCheckIn) {
+            .sheet(isPresented: $showingCheckIn) {
                 if let episode = selectedEpisode, let checkInType = checkInToShow {
                     CheckInView(episode: episode, checkInType: checkInType) {
                         // Called when check-in is completed
@@ -153,10 +153,12 @@ struct ResilienceView: View {
             }
         }
         .onAppear {
-            // Check notification permissions on app launch
-            Task {
+            // Update badge count synchronously
+            updateBadgeCount()
+            
+            // Check permissions in background
+            Task.detached {
                 await NotificationManager.shared.checkPermission()
-                updateBadgeCount()
             }
         }
         .onChange(of: notificationCoordinator.pendingNavigation) { _, pendingNav in
@@ -165,6 +167,10 @@ struct ResilienceView: View {
                 handleNotificationNavigation(navigation)
                 notificationCoordinator.clearPendingNavigation()
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Update badge count when app becomes active
+            updateBadgeCount()
         }
     }
     
@@ -183,7 +189,9 @@ struct ResilienceView: View {
                     // Navigate to check-in view
                     selectedEpisode = episode
                     checkInToShow = navigation.checkInType
-                    showingCheckIn = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                showingCheckIn = true
+                    }
                     
                     print("✅ Navigating to check-in: \(navigation.checkInType.displayName) for episode: \(episode.title)")
                 } else {
