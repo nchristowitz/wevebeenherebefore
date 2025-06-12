@@ -57,6 +57,17 @@ final class Episode {
         return checkIns.first { $0.checkInType == type }
     }
     
+    // Returns true if any check-in window is currently active and the check-in
+       // hasn't been completed yet.
+       var hasPendingCheckIn: Bool {
+           for type in CheckInType.allCases {
+               if isCheckInWindowActive(for: type) && !hasCheckIn(for: type) {
+                   return true
+               }
+           }
+           return false
+       }
+    
     // Notification management methods
     func scheduleNotifications() {
         let ids = NotificationManager.shared.scheduleCheckInNotifications(for: self)

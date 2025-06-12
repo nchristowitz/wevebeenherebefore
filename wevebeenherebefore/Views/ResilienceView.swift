@@ -156,6 +156,12 @@ struct ResilienceView: View {
             // Update badge count synchronously
             updateBadgeCount()
             
+            // Navigate to pending check-in if a notification was tapped before the view appeared
+            if let navigation = notificationCoordinator.pendingNavigation {
+                handleNotificationNavigation(navigation)
+                notificationCoordinator.clearPendingNavigation()
+            }
+            
             // Check permissions in background
             Task.detached {
                 await NotificationManager.shared.checkPermission()

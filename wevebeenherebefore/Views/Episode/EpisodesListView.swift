@@ -11,15 +11,23 @@ struct EpisodesListView: View {
             List {
                 ForEach(episodes) { episode in
                     NavigationLink(value: episode) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(episode.title)
-                                .font(.headline)
-                            
-                            Text(episode.date, format: .dateTime.month().day().year())
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(episode.title)
+                                    .font(.headline)
+
+                                Text(episode.date, format: .dateTime.month().day().year())
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.vertical, 4)
+
+                            Spacer()
+
+                            if episode.hasPendingCheckIn {
+                                NotificationDot()
+                            }
                         }
-                        .padding(.vertical, 4)
                     }
                 }
                 .onDelete(perform: deleteEpisodes)
