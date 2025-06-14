@@ -125,8 +125,7 @@ struct EpisodeSummaryView: View {
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(Color(.secondarySystemBackground))
-                                .cornerRadius(12)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                                 .contextMenu {
                                     Button("Edit") {
                                         editingNote = note
@@ -188,24 +187,25 @@ struct EpisodeSummaryView: View {
                                 // Add check-in section if this prompt has an associated check-in
                                 if let checkInType = promptToCheckIn[promptKey], let episode = episode {
                                     VStack(alignment: .leading, spacing: 12) {
-                                        HStack {
-                                            Text(checkInType.displayName)
-                                                .font(.headline)  // Smaller than title3
-                                                .fontWeight(.medium)  // Less bold than semibold
-                                            
-                                            Spacer()
-                                            
-                                            if let existingCheckIn = episode.checkIn(for: checkInType) {
-                                                // Show existing check-in, no add button
-                                            } else if episode.isCheckInWindowActive(for: checkInType) {
-                                                Button("Add Check-in") {
-                                                    addingCheckInType = checkInType
-                                                }
-                                                .font(.subheadline)
-                                                .foregroundColor(.blue)
+                                        Text(checkInType.displayName)
+                                            .font(.headline)  // Smaller than title3
+                                            .fontWeight(.medium)  // Less bold than semibold
+                                        
+                                        // Primary check-in button when window is active and no existing check-in
+                                        if episode.checkIn(for: checkInType) == nil && episode.isCheckInWindowActive(for: checkInType) {
+                                            Button(action: {
+                                                addingCheckInType = checkInType
+                                            }) {
+                                                Text("Add \(checkInType.displayName)")
+                                                    .font(.body)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.white)
+                                                    .frame(maxWidth: .infinity)
+                                                    .padding(.vertical, 12)
+                                                    .background(Color.blue)
+                                                    .cornerRadius(8)
                                             }
                                         }
-                                        .padding(.top, 8)
                                         
                                         // Display existing check-in if it exists
                                         if let checkIn = episode.checkIn(for: checkInType) {
@@ -217,10 +217,7 @@ struct EpisodeSummaryView: View {
                                                 Text(checkIn.text)
                                                     .font(.body)
                                             }
-                                            .padding()
                                             .frame(maxWidth: .infinity, alignment: .leading)
-                                            .background(Color(.secondarySystemBackground))
-                                            .cornerRadius(12)
                                             .contextMenu {
                                                 Button("Edit") {
                                                     editingCheckIn = checkIn
@@ -234,17 +231,24 @@ struct EpisodeSummaryView: View {
                                                 editingCheckIn = checkIn
                                             }
                                         } else if !episode.isCheckInWindowActive(for: checkInType) && shouldShowEmptyCheckInSection(for: checkInType, episode: episode) {
-                                            // Show placeholder text for check-ins that aren't available yet
-                                            Text(checkInPlaceholderText(for: checkInType, episode: episode))
-                                                .font(.body)
-                                                .foregroundColor(.secondary)
-                                                .italic()
-                                                .padding()
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .background(Color(.secondarySystemBackground).opacity(0.5))
-                                                .cornerRadius(12)
+                                            // Show disabled button for check-ins that aren't available yet
+                                            Button(action: {
+                                                // No action - disabled state
+                                            }) {
+                                                Text(checkInPlaceholderText(for: checkInType, episode: episode))
+                                                    .font(.body)
+                                                    .fontWeight(.medium)
+                                                    .foregroundColor(.secondary)
+                                                    .frame(maxWidth: .infinity)
+                                                    .padding(.vertical, 12)
+                                                    .background(Color(.quaternarySystemFill))
+                                                    .cornerRadius(8)
+                                            }
+                                            .disabled(true)
                                         }
                                     }
+                                    .padding()
+                                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                                     .id(refreshID) // Force refresh when this changes
                                 }
                             }

@@ -34,7 +34,7 @@ struct EpisodeMenu: View {
                 Group {
                     if hasPending {
                         NotificationDot()
-                            .offset(x: 12, y: -12)
+                            .offset(x: 2, y: -2)
                     }
                 }, alignment: .topTrailing
             )
