@@ -183,10 +183,6 @@ struct EpisodeFlowCoordinator: View {
             if NotificationManager.shared.hasPermission {
                 let scheduledIDs = NotificationManager.shared.scheduleCheckInNotifications(for: episode)
                 episode.notificationIDs = scheduledIDs
-                print("✅ Scheduled \(scheduledIDs.count) notifications for episode: \(episode.title)")
-                
-                // Debug: Log pending notifications
-                await NotificationManager.shared.logPendingNotifications()
             } else {
                 print("⚠️ Notifications not scheduled - permission denied")
             }

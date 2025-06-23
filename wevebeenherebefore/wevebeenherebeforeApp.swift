@@ -63,10 +63,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 @main
 struct wevebeenherebeforeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
-    @State private var selectedEpisode: Episode?
-    @State private var checkInToShow: CheckInType?
-    @State private var showingCheckIn = false
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -87,54 +83,7 @@ struct wevebeenherebeforeApp: App {
     var body: some Scene {
         WindowGroup {
             ResilienceView()
-                .sheet(isPresented: $showingCheckIn) {
-                    if let episode = selectedEpisode, let checkInType = checkInToShow {
-                        CheckInView(episode: episode, checkInType: checkInType) {
-                            // Called when check-in is completed
-                            showingCheckIn = false
-                            selectedEpisode = nil
-                            checkInToShow = nil
-                        }
-                    }
-                }
-                .onChange(of: notificationCoordinator.pendingNavigation) { _, pendingNav in
-                    if let navigation = pendingNav {
-                        handleNotificationNavigation(navigation)
-                        notificationCoordinator.clearPendingNavigation()
-                    }
-                }
         }
         .modelContainer(sharedModelContainer)
-    }
-    
-    private func handleNotificationNavigation(_ navigation: NotificationCoordinator.PendingNavigation) {
-        let context = sharedModelContainer.mainContext
-        let descriptor = FetchDescriptor<Episode>()
-        
-        do {
-            let episodes = try context.fetch(descriptor)
-            if let episode = episodes.first(where: { "\($0.persistentModelID)" == navigation.episodeID }) {
-                
-                // Check if this check-in already exists
-                let existingCheckIn = episode.checkIns.first { $0.checkInType == navigation.checkInType }
-                
-                if existingCheckIn == nil {
-                    // Navigate to check-in view
-                    selectedEpisode = episode
-                    checkInToShow = navigation.checkInType
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showingCheckIn = true
-                    }
-                    
-                    print("✅ App-level navigation to check-in: \(navigation.checkInType.displayName) for episode: \(episode.title)")
-                } else {
-                    print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
-                }
-            } else {
-                print("❌ Episode not found for ID: \(navigation.episodeID)")
-            }
-        } catch {
-            print("❌ Error fetching episodes: \(error)")
-        }
     }
 }

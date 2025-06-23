@@ -179,19 +179,8 @@ class NotificationManager: ObservableObject {
         cancelNotification(with: notificationID)
     }
     
-    // Debug function to check pending notifications
-    func logPendingNotifications() async {
-        let requests = await UNUserNotificationCenter.current().pendingNotificationRequests()
-        print("📋 Pending notifications: \(requests.count)")
-        
-        for request in requests {
-            if let trigger = request.trigger as? UNCalendarNotificationTrigger,
-               let nextTriggerDate = trigger.nextTriggerDate() {
-                print("   - \(request.identifier): \(nextTriggerDate)")
-            }
-        }
-    }
 }
+
 
 // Helper extension for setting date components
 extension Date {
