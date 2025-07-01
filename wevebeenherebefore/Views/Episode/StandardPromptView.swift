@@ -17,16 +17,12 @@ struct StandardPromptView: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(prompt.question)
                     .font(.title)
                     .fontWeight(.bold)
-                    .padding(.top)
-                
-                Text(prompt.placeholder)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                    .padding(.top, 4)
             }
             
             if isFixedHeight {
@@ -34,20 +30,42 @@ struct StandardPromptView: View {
                 TextEditor(text: $text)
                     .focused($isFocused)
                     .scrollContentBackground(.hidden)
-                    .font(.body)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .background(.clear)
+                    .font(.system(size: 24, weight: .regular, design: .default))
+                    .overlay(
+                        Group {
+                            if text.isEmpty {
+                                Text(prompt.placeholder)
+                                    .font(.system(size: 24, weight: .regular, design: .default))
+                                    .foregroundColor(.primary.opacity(0.5))
+                                    .allowsHitTesting(false)
+                                    .padding(.leading, 5)
+                                    .padding(.top, 8)
+                            }
+                        },
+                        alignment: .topLeading
+                    )
                     .frame(height: 80)
             } else {
                 // Flexible height for regular prompts
                 TextEditor(text: $text)
                     .focused($isFocused)
                     .scrollContentBackground(.hidden)
-                    .font(.body)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .background(.clear)
+                    .font(.system(size: 24, weight: .regular, design: .default))
+                    .overlay(
+                        Group {
+                            if text.isEmpty {
+                                Text(prompt.placeholder)
+                                    .font(.system(size: 24, weight: .regular, design: .default))
+                                    .foregroundColor(.primary.opacity(0.5))
+                                    .allowsHitTesting(false)
+                                    .padding(.leading, 5)
+                                    .padding(.top, 8)
+                            }
+                        },
+                        alignment: .topLeading
+                    )
                     .frame(minHeight: 200)
             }
             
@@ -68,4 +86,14 @@ struct StandardPromptView: View {
             }
         }
     }
-} 
+}
+
+#Preview {
+    NavigationStack {
+        StandardPromptView(
+            prompt: EpisodePrompt.prompts[0],
+            text: .constant(""),
+            onNext: {}
+        )
+    }
+}

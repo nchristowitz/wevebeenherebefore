@@ -9,24 +9,33 @@ struct EpisodePromptView: View {
     let onNext: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(prompt.question)
                     .font(.title)
                     .fontWeight(.bold)
-                
-                Text(prompt.placeholder)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                    .padding(.leading, 5)
+
             }
             
             TextEditor(text: $text)
                 .focused($isFocused)
                 .scrollContentBackground(.hidden)
-                .font(.body)
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(12)
+                .background(.clear)
+                .font(.system(size: 24, weight: .regular, design: .default))
+                .overlay(
+                    Group {
+                        if text.isEmpty {
+                            Text(prompt.placeholder)
+                                .font(.system(size: 24, weight: .regular, design: .default))
+                                .foregroundColor(.primary.opacity(0.5))
+                                .allowsHitTesting(false)
+                                .padding(.leading, 5)
+                                .padding(.top, 8)
+                        }
+                    },
+                    alignment: .topLeading
+                )
                 
             Spacer()
         }
@@ -89,14 +98,14 @@ struct EpisodePrompt: Identifiable, Equatable {
             ),
             EpisodePrompt(
                 id: 4,
-                question: "How about in 3 months?",
+                question: "How will you feel 3 months from now?",
                 placeholder: "Think about the bigger picture",
                 isLast: false
             ),
             EpisodePrompt(
                 id: 5,
                 question: "Let's give this episode a title",
-                placeholder: "Keep it short but recognizable for future you",
+                placeholder: "Keep it short but recognizable to future you",
                 isLast: true
             )
         ]

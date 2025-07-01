@@ -9,25 +9,34 @@ struct EpisodeTitlePromptView: View {
     let onNext: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(prompt.question)
                     .font(.title)
                     .fontWeight(.bold)
-                
-                Text(prompt.placeholder)
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                    .padding(.leading, 5)
+                    .padding(.top, 4)
             }
             
             TextEditor(text: $text)
                 .focused($isFocused)
                 .scrollContentBackground(.hidden)
-                .font(.body)
-                .padding()
-                .background(Color(.secondarySystemBackground))
-                .cornerRadius(12)
-                .frame(height: 104)
+                .background(.clear)
+                .font(.system(size: 24, weight: .regular, design: .default))
+                .overlay(
+                    Group {
+                        if text.isEmpty {
+                            Text(prompt.placeholder)
+                                .font(.system(size: 24, weight: .regular, design: .default))
+                                .foregroundColor(.primary.opacity(0.5))
+                                .allowsHitTesting(false)
+                                .padding(.leading, 5)
+                                .padding(.top, 8)
+                        }
+                    },
+                    alignment: .topLeading
+                )
+            
                 
             Spacer()
         }

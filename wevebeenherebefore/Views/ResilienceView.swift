@@ -48,7 +48,7 @@ struct ResilienceView: View {
                 List {
                     ForEach(filteredCards) { card in
                         CardView(card: card)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .swipeActions(edge: .trailing) {
@@ -245,13 +245,13 @@ struct CardView: View {
     let card: Card
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: -12) {
             if card.type == .memory, let date = card.date {
                 Text(date, format: .dateTime.month().year())
                     .font(.caption)
                     .textCase(.uppercase)
-                    .opacity(0.5)
-                    .padding(.horizontal)
+                    .opacity(0.6)
+                    .padding(.horizontal, 20)
                     .padding(.top)
             }
             
@@ -262,7 +262,7 @@ struct CardView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
                 } else {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -277,12 +277,13 @@ struct CardView: View {
             if !card.text.isEmpty {
                 Text(card.text)
                     .font(.system(size: 32, weight: .regular, design: .default))
-                    .padding()
+                    .padding(20)
+                    .kerning(-0.3)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .background(card.color)
-        .cornerRadius(12)
+        .cornerRadius(20)
         .foregroundColor(card.color.contrastingTextColor())
     }
 }
@@ -321,6 +322,25 @@ struct AddCardMenuView: View {
 }
 
 #Preview {
-    ResilienceView()
-        .modelContainer(for: Card.self, inMemory: true)
+    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+    let container = try! ModelContainer(for: Card.self, configurations: config)
+    
+    // Create sample cards
+    let sampleCards = [
+        Card(text: "The way my cat's fur feels under his neck", type: .delight, color: .orange),
+        Card(text: "I overcame my fear of failure and learned German", type: .memory, color: .blue, date: Date().addingTimeInterval(-86400 * 30)),
+        Card(text: "Go for a long coffee walk", type: .technique, color: .green),
+        Card(text: "Dancing in the kitchen while cooking dinner", type: .delight, color: .pink),
+        Card(text: "The time I spoke up for myself at work and got promoted", type: .memory, color: .purple, date: Date().addingTimeInterval(-86400 * 60)),
+        Card(text: "Take five deep breaths and count them slowly", type: .technique, color: .teal),
+        Card(text: "Warm sunlight streaming through my window in the morning", type: .delight, color: .yellow),
+        Card(text: "When I helped a stranger and realized how good it felt", type: .memory, color: .indigo, date: Date().addingTimeInterval(-86400 * 10))
+    ]
+    
+    for card in sampleCards {
+        container.mainContext.insert(card)
+    }
+    
+    return ResilienceView()
+        .modelContainer(container)
 }
