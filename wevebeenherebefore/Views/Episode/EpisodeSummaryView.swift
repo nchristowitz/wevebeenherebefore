@@ -273,10 +273,12 @@ struct EpisodeSummaryView: View {
                         if let response = prompts[promptKey] {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(promptKey)
-                                    .font(.headline)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
                                 
                                 Text(response)
                                     .font(.body)
+                                    .foregroundColor(.secondary)
                             }
                             
                             // Add divider after each remaining prompt except the last one
