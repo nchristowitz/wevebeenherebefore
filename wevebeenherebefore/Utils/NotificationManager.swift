@@ -37,6 +37,9 @@ class NotificationManager: ObservableObject {
     }
     
     func scheduleCheckInNotifications(for episode: Episode) -> [String] {
+        print("🔔 Starting notification scheduling for episode: \(episode.title)")
+        print("📱 Permission status: \(hasPermission)")
+        
         guard hasPermission else {
             print("❌ Cannot schedule notifications: Permission not granted")
             return []
@@ -45,14 +48,16 @@ class NotificationManager: ObservableObject {
         var notificationIDs: [String] = []
         
         for checkInType in CheckInType.allCases {
+            print("📅 Attempting to schedule \(checkInType.displayName) notification...")
             if let notificationID = scheduleNotification(for: episode, checkInType: checkInType) {
                 notificationIDs.append(notificationID)
-                print("✅ Scheduled notification for \(checkInType.displayName)")
+                print("✅ Successfully scheduled notification for \(checkInType.displayName) with ID: \(notificationID)")
             } else {
                 print("❌ Failed to schedule notification for \(checkInType.displayName)")
             }
         }
         
+        print("📊 Total notifications scheduled: \(notificationIDs.count)/\(CheckInType.allCases.count)")
         return notificationIDs
     }
     
@@ -177,6 +182,19 @@ class NotificationManager: ObservableObject {
     func cancelNotificationForCheckIn(episode: Episode, checkInType: CheckInType) {
         let notificationID = "\(episode.persistentModelID)_\(checkInType.rawValue)"
         cancelNotification(with: notificationID)
+    }
+    
+    // Debug function to check pending notifications
+    func debugPendingNotifications() {
+        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
+            print("📋 Total pending notifications: \(requests.count)")
+            for request in requests {
+                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
+                    let components = trigger.dateComponents
+                    print("📅 Pending: \(request.identifier) - \(components)")
+                }
+            }
+        }
     }
     
 }

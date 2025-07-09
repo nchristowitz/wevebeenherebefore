@@ -86,7 +86,8 @@ struct EpisodeSummaryView: View {
         "How do you think you'll feel tomorrow?",
         "How do you think you'll feel about this in 2 weeks?",
         "What's the worst that can happen?",
-        "How about in 3 months?"
+        "How about in 3 months?",
+        "How will you feel 3 months from now?"
         // The title is handled separately and not shown in the prompts section
     ]
     
@@ -94,7 +95,8 @@ struct EpisodeSummaryView: View {
     private let promptToCheckIn: [String: CheckInType] = [
         "How do you think you'll feel tomorrow?": .twentyFourHour,
         "How do you think you'll feel about this in 2 weeks?": .twoWeek,
-        "How about in 3 months?": .threeMonth
+        "How about in 3 months?": .threeMonth,
+        "How will you feel 3 months from now?": .threeMonth
     ]
     
     var body: some View {
@@ -391,7 +393,8 @@ struct EpisodeSummaryView: View {
         case .twoWeek, .threeMonth:
             let targetDate = calendar.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
             // Show the section if the target date hasn't arrived yet, or if it's been more than 24 hours past the target
-            return now < targetDate || now > calendar.date(byAdding: .hour, value: 24, to: targetDate)!
+            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: targetDate) ?? targetDate
+            return now < targetDate || now > windowEnd
         }
     }
     
