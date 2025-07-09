@@ -3,6 +3,15 @@ import SwiftUI
 struct CircularButton: View {
     let systemImage: String
     let action: () -> Void
+    let accessibilityLabel: String
+    let accessibilityHint: String?
+    
+    init(systemImage: String, accessibilityLabel: String, accessibilityHint: String? = nil, action: @escaping () -> Void) {
+        self.systemImage = systemImage
+        self.accessibilityLabel = accessibilityLabel
+        self.accessibilityHint = accessibilityHint
+        self.action = action
+    }
     
     var body: some View {
         Button(action: action) {
@@ -17,5 +26,8 @@ struct CircularButton: View {
                         .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
                 )
         }
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint ?? "")
+        .accessibilityAddTraits(.isButton)
     }
 }

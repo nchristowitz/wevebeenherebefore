@@ -54,9 +54,16 @@ struct ResilienceView: View {
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) {
                                     modelContext.delete(card)
+                                    do {
+                                        try modelContext.save()
+                                    } catch {
+                                        print("Error deleting card: \(error)")
+                                    }
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .accessibilityLabel("Delete card")
+                                .accessibilityHint("Permanently remove this \(card.type.rawValue) card")
                                 
                                 Button {
                                     editingCard = card
@@ -64,6 +71,8 @@ struct ResilienceView: View {
                                     Label("Edit", systemImage: "pencil")
                                 }
                                 .tint(.blue)
+                                .accessibilityLabel("Edit card")
+                                .accessibilityHint("Modify this \(card.type.rawValue) card")
                             }
                     }
                 }
@@ -75,15 +84,27 @@ struct ResilienceView: View {
                 
                     // Bottom buttons
                     HStack(spacing: 24) {
-                        CircularButton(systemImage: "gearshape") {
+                        CircularButton(
+                            systemImage: "gearshape",
+                            accessibilityLabel: "Settings",
+                            accessibilityHint: "Open settings and filter menu"
+                        ) {
                             isShowingFilterMenu = true
                         }
                         
-                        CircularButton(systemImage: "tornado") {
+                        CircularButton(
+                            systemImage: "tornado",
+                            accessibilityLabel: "Episodes",
+                            accessibilityHint: "View and manage emotional episodes"
+                        ) {
                             isShowingEpisodeMenu = true
                         }
                         
-                        CircularButton(systemImage: "plus") {
+                        CircularButton(
+                            systemImage: "plus",
+                            accessibilityLabel: "Add Card",
+                            accessibilityHint: "Add a new resilience card"
+                        ) {
                             isShowingAddMenu = true
                         }
                     }
@@ -244,6 +265,32 @@ struct ResilienceView: View {
 struct CardView: View {
     let card: Card
     
+    private var accessibilityLabel: String {
+        var components: [String] = []
+        
+        // Add card type
+        components.append("\(card.type.rawValue.capitalized) card")
+        
+        // Add date for memories
+        if card.type == .memory, let date = card.date {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            components.append("from \(formatter.string(from: date))")
+        }
+        
+        // Add text content
+        if !card.text.isEmpty {
+            components.append(card.text)
+        }
+        
+        // Add image info
+        if card.imageData != nil {
+            components.append("includes image")
+        }
+        
+        return components.joined(separator: ", ")
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: -12) {
             if card.type == .memory, let date = card.date {
@@ -253,6 +300,7 @@ struct CardView: View {
                     .opacity(0.6)
                     .padding(.horizontal, 20)
                     .padding(.top)
+                    .accessibilityLabel("Date: \(date, format: .dateTime.month().year())")
             }
             
             if let imageData = card.imageData,
@@ -263,6 +311,8 @@ struct CardView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .accessibilityLabel("Card image")
+                        .accessibilityHint("Resilience card image for \(card.type.rawValue)")
                 } else {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -271,6 +321,8 @@ struct CardView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .padding(.horizontal)
                         .padding(.top)
+                        .accessibilityLabel("Card image")
+                        .accessibilityHint("Supporting image for this \(card.type.rawValue)")
                 }
             }
             
@@ -280,11 +332,16 @@ struct CardView: View {
                     .padding(20)
                     .kerning(-0.3)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityLabel(card.text)
             }
         }
         .background(card.color)
         .cornerRadius(20)
         .foregroundColor(card.color.contrastingTextColor())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double tap to view actions. Swipe actions available.")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

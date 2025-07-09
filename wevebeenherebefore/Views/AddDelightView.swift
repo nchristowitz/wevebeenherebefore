@@ -30,7 +30,7 @@ struct AddDelightView: View {
                         Image(systemName: "photo")
                         Text("Add Photo")
                     }
-                    .foregroundColor(textColor(for: selectedColor))
+                    .foregroundColor(selectedColor.contrastingTextColor())
                 }
                 .onChange(of: selectedItem) {
                     Task {
@@ -55,11 +55,6 @@ struct AddDelightView: View {
         }
     }
     
-    private func textColor(for backgroundColor: Color) -> Color {
-        let components = UIColor(backgroundColor).cgColor.components ?? [0, 0, 0, 0]
-        let brightness = ((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000
-        return brightness > 0.5 ? .black : .white
-    }
     
     private func extractColor(from image: UIImage) async -> Color? {
         return await withCheckedContinuation { continuation in

@@ -1,6 +1,26 @@
 import SwiftUI
 import SwiftData
 
+enum SheetState: Identifiable {
+    case addNote
+    case editNote(EpisodeNote)
+    case editCheckIn(CheckIn)
+    case addCheckIn(CheckInType)
+    
+    var id: String {
+        switch self {
+        case .addNote:
+            return "addNote"
+        case .editNote(let note):
+            return "editNote_\(note.createdAt.timeIntervalSince1970)"
+        case .editCheckIn(let checkIn):
+            return "editCheckIn_\(checkIn.createdAt.timeIntervalSince1970)"
+        case .addCheckIn(let type):
+            return "addCheckIn_\(type.rawValue)"
+        }
+    }
+}
+
 struct EpisodeSummaryView: View {
     @Environment(\.dismiss) private var dismiss
     
@@ -10,11 +30,7 @@ struct EpisodeSummaryView: View {
     private let episode: Episode?
     private let onSave: (() -> Void)?
     
-    @State private var isShowingAddNote = false
-    @State private var refreshID = UUID()
-    @State private var editingNote: EpisodeNote?
-    @State private var editingCheckIn: CheckIn?
-    @State private var addingCheckInType: CheckInType?
+    @State private var sheetState: SheetState?
     
     // For viewing existing episodes with notes
     init(episode: Episode) {
@@ -106,7 +122,7 @@ struct EpisodeSummaryView: View {
                             Spacer()
                             
                             Button("Add Note") {
-                                isShowingAddNote = true
+                                sheetState = .addNote
                             }
                             .font(.subheadline)
                             .foregroundColor(.blue)
@@ -128,7 +144,7 @@ struct EpisodeSummaryView: View {
                                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                                 .contextMenu {
                                     Button("Edit") {
-                                        editingNote = note
+                                        sheetState = .editNote(note)
                                     }
                                     
                                     Button("Delete", role: .destructive) {
@@ -139,11 +155,10 @@ struct EpisodeSummaryView: View {
                                     // Double tap to edit as alternative
                                 }
                                 .onLongPressGesture(minimumDuration: 0.5) {
-                                    editingNote = note
+                                    sheetState = .editNote(note)
                                 }
                             }
                         }
-                        .id(refreshID) // Force refresh when this changes
                     }
                 }
                 
@@ -194,7 +209,7 @@ struct EpisodeSummaryView: View {
                                         // Primary check-in button when window is active and no existing check-in
                                         if episode.checkIn(for: checkInType) == nil && episode.isCheckInWindowActive(for: checkInType) {
                                             Button(action: {
-                                                addingCheckInType = checkInType
+                                                sheetState = .addCheckIn(checkInType)
                                             }) {
                                                 Text("Add \(checkInType.displayName)")
                                                     .font(.body)
@@ -220,7 +235,7 @@ struct EpisodeSummaryView: View {
                                             .frame(maxWidth: .infinity, alignment: .leading)
                                             .contextMenu {
                                                 Button("Edit") {
-                                                    editingCheckIn = checkIn
+                                                    sheetState = .editCheckIn(checkIn)
                                                 }
                                                 
                                                 Button("Delete", role: .destructive) {
@@ -228,7 +243,7 @@ struct EpisodeSummaryView: View {
                                                 }
                                             }
                                             .onLongPressGesture(minimumDuration: 0.5) {
-                                                editingCheckIn = checkIn
+                                                sheetState = .editCheckIn(checkIn)
                                             }
                                         } else if !episode.isCheckInWindowActive(for: checkInType) && shouldShowEmptyCheckInSection(for: checkInType, episode: episode) {
                                             // Show disabled button for check-ins that aren't available yet
@@ -249,8 +264,7 @@ struct EpisodeSummaryView: View {
                                     }
                                     .padding()
                                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                                    .id(refreshID) // Force refresh when this changes
-                                }
+                                            }
                             }
                             
                             // Add divider after each prompt except the last one
@@ -309,33 +323,21 @@ struct EpisodeSummaryView: View {
                 }
             }
         }
-        .sheet(isPresented: $isShowingAddNote, onDismiss: {
-            // Refresh the notes list when returning from add note
-            refreshID = UUID()
-        }) {
-            if let episode = episode {
-                AddNoteView(episode: episode)
+        .sheet(item: $sheetState) { state in
+            switch state {
+            case .addNote:
+                if let episode = episode {
+                    AddNoteView(episode: episode)
+                }
+            case .editNote(let note):
+                EditNoteView(note: note)
+            case .addCheckIn(let checkInType):
+                if let episode = episode {
+                    CheckInView(episode: episode, checkInType: checkInType)
+                }
+            case .editCheckIn(let checkIn):
+                CheckInView(episode: episode!, checkInType: checkIn.checkInType, existingCheckIn: checkIn)
             }
-        }
-        .sheet(item: $editingNote, onDismiss: {
-            // Refresh the notes list when returning from edit note
-            refreshID = UUID()
-        }) { note in
-            EditNoteView(note: note)
-        }
-        .sheet(item: $addingCheckInType, onDismiss: {
-            // Refresh when returning from add check-in
-            refreshID = UUID()
-        }) { checkInType in
-            if let episode = episode {
-                CheckInView(episode: episode, checkInType: checkInType)
-            }
-        }
-        .sheet(item: $editingCheckIn, onDismiss: {
-            // Refresh when returning from edit check-in
-            refreshID = UUID()
-        }) { checkIn in
-            CheckInView(episode: episode!, checkInType: checkIn.checkInType, existingCheckIn: checkIn)
         }
     }
     
@@ -344,17 +346,28 @@ struct EpisodeSummaryView: View {
     private func deleteNote(_ note: EpisodeNote) {
         withAnimation {
             modelContext.delete(note)
+            do {
+                try modelContext.save()
+            } catch {
+                // Handle the error gracefully
+                print("Error deleting note: \(error)")
+                // You could show an alert to the user here
+            }
         }
-        // Trigger refresh after deletion
-        refreshID = UUID()
     }
     
     private func deleteCheckIn(_ checkIn: CheckIn) {
         withAnimation {
             modelContext.delete(checkIn)
+            do {
+                try modelContext.save()
+            } catch {
+                // Handle the error gracefully
+                print("Error deleting check-in: \(error)")
+                // You could show an alert to the user here
+                return
+            }
         }
-        // Trigger refresh after deletion
-        refreshID = UUID()
         
         // If the check-in is deleted, we might want to reschedule the notification
         // (in case user wants another chance to add the check-in)

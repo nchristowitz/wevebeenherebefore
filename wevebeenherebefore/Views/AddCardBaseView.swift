@@ -81,13 +81,13 @@ struct AddCardBaseView<Content: View>: View {
                     Button("Back") {
                         dismiss()
                     }
-                    .foregroundColor(textColor(for: selectedColor))
+                    .foregroundColor(selectedColor.contrastingTextColor())
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveCard()
                     }
-                    .foregroundColor(textColor(for: selectedColor))
+                    .foregroundColor(selectedColor.contrastingTextColor())
                 }
 
             }
@@ -105,36 +105,38 @@ struct AddCardBaseView<Content: View>: View {
         }
     }
     
-    private func textColor(for backgroundColor: Color) -> Color {
-        let components = UIColor(backgroundColor).cgColor.components ?? [0, 0, 0, 0]
-        let brightness = ((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000
-        return brightness > 0.5 ? .black : .white
-    }
     
     private func saveCard() {
         guard !text.isEmpty || (type == .delight && imageData != nil) else { return }
         
-        if let existingCard = existingCard {
-            existingCard.text = text
-            existingCard.color = selectedColor
-            if type == .memory {
-                existingCard.date = selectedDate
+        do {
+            if let existingCard = existingCard {
+                existingCard.text = text
+                existingCard.color = selectedColor
+                if type == .memory {
+                    existingCard.date = selectedDate
+                }
+                if type == .delight {
+                    existingCard.imageData = imageData
+                }
+            } else {
+                let card = Card(
+                    text: text,
+                    type: type,
+                    color: selectedColor,
+                    date: type == .memory ? selectedDate : nil,
+                    imageData: type == .delight ? imageData : nil
+                )
+                modelContext.insert(card)
             }
-            if type == .delight {
-                existingCard.imageData = imageData
-            }
-        } else {
-            let card = Card(
-                text: text,
-                type: type,
-                color: selectedColor,
-                date: type == .memory ? selectedDate : nil,
-                imageData: type == .delight ? imageData : nil
-            )
-            modelContext.insert(card)
+            
+            try modelContext.save()
+            dismiss()
+        } catch {
+            // Handle the error gracefully
+            print("Error saving card: \(error)")
+            // You could show an alert to the user here
         }
-        
-        dismiss()
     }
 }
 

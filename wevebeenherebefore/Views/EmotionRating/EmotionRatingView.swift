@@ -24,6 +24,7 @@ struct EmotionRatingView: View {
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top)
+                        .accessibilityAddTraits(.isHeader)
                     
                     VStack(alignment: .leading, spacing: 24) {
                         ForEach(Array(emotions.keys.sorted()), id: \.self) { emotion in
@@ -37,9 +38,11 @@ struct EmotionRatingView: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Emotion ratings")
                 }
                 .padding(.horizontal)
             }
+            .accessibilityLabel("Emotion rating form")
             
             Button(action: {
                 onComplete(emotions)
@@ -53,6 +56,8 @@ struct EmotionRatingView: View {
                     .cornerRadius(12)
             }
             .padding()
+            .accessibilityLabel("Next")
+            .accessibilityHint("Continue to next step with current emotion ratings")
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -74,6 +79,7 @@ struct EmotionRatingRow: View {
             Text(emotion)
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityAddTraits(.isHeader)
             
             GeometryReader { geometry in
                 let availableWidth = max(geometry.size.width, 1) // Ensure width is never zero
@@ -100,6 +106,7 @@ struct EmotionRatingRow: View {
             }
             .frame(height: 60)
         }
+        .accessibilityElement(children: .contain)
     }
 }
 

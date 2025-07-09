@@ -54,6 +54,12 @@ struct EpisodesListView: View {
                 episode.cancelAllNotifications()
                 modelContext.delete(episode)
             }
+            
+            do {
+                try modelContext.save()
+            } catch {
+                print("Error deleting episodes: \(error)")
+            }
         }
     }
 }

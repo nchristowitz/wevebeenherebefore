@@ -24,6 +24,9 @@ struct MenuTray<Content: View>: View {
                     .onTapGesture {
                         isPresented = false
                     }
+                    .accessibilityLabel("Dismiss menu")
+                    .accessibilityHint("Tap to close the \(title) menu")
+                    .accessibilityAddTraits(.isButton)
                 
                 // Tray content
                 VStack(spacing: 0) {
@@ -33,10 +36,14 @@ struct MenuTray<Content: View>: View {
                             .fill(Color.secondary.opacity(0.5))
                             .frame(width: 36, height: 5)
                             .padding(.top, 8)
+                            .accessibilityLabel("Drag handle")
+                            .accessibilityHint("Drag down to dismiss \(title) menu")
+                            .accessibilityAddTraits(.allowsDirectInteraction)
                         
                         Text(title)
                             .font(.headline)
                             .padding(.bottom, 8)
+                            .accessibilityAddTraits(.isHeader)
                     }
                     .frame(maxWidth: .infinity)
                     
@@ -46,6 +53,7 @@ struct MenuTray<Content: View>: View {
                             .padding(.vertical, 20)
                     }
                     .frame(maxHeight: .infinity, alignment: .top)
+                    .accessibilityLabel("\(title) content")
                 }
                 .frame(maxHeight: maxHeight)
                 .background(.thickMaterial)
@@ -53,6 +61,10 @@ struct MenuTray<Content: View>: View {
                 .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: -5)
                 .offset(y: isPresented ? min(dragOffset, maxHeight) : geometry.size.height)
                 .animation(isDragging ? nil : .spring(response: 0.3), value: isPresented)
+                .accessibilityElement(children: .contain)
+                .accessibilityAction(named: "Dismiss") {
+                    isPresented = false
+                }
                 .gesture(
                     DragGesture()
                         .onChanged { value in
