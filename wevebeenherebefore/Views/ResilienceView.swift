@@ -16,11 +16,32 @@ struct ResilienceView: View {
     @State private var editingCard: Card?
     @State private var isShowingAddMenu = false
     @State private var isShowingEpisodeMenu = false
+    @State private var isShowingDebugView = false
     
     // Navigation state for deep linking
     @State private var selectedEpisode: Episode?
     @State private var checkInToShow: CheckInType?
     @State private var showingCheckIn = false
+    
+    // Check if there are pending check-ins
+    private var hasPendingCheckIns: Bool {
+        let descriptor = FetchDescriptor<Episode>()
+        
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+            for episode in episodes {
+                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
+                for checkInType in CheckInType.allCases {
+                    if !completedCheckInTypes.contains(checkInType) && episode.isCheckInWindowActive(for: checkInType) {
+                        return true
+                    }
+                }
+            }
+        } catch {
+            print("Error checking for pending check-ins: \(error)")
+        }
+        return false
+    }
     
     var filteredCards: [Card] {
         guard let filter = selectedFilter else { return cards }
@@ -92,12 +113,20 @@ struct ResilienceView: View {
                             isShowingFilterMenu = true
                         }
                         
-                        CircularButton(
-                            systemImage: "tornado",
-                            accessibilityLabel: "Episodes",
-                            accessibilityHint: "View and manage emotional episodes"
-                        ) {
-                            isShowingEpisodeMenu = true
+                        ZStack {
+                            CircularButton(
+                                systemImage: "tornado",
+                                accessibilityLabel: "Episodes",
+                                accessibilityHint: "View and manage emotional episodes"
+                            ) {
+                                isShowingEpisodeMenu = true
+                            }
+                            
+                            // Notification dot for pending check-ins
+                            if hasPendingCheckIns {
+                                NotificationDot()
+                                    .offset(x: 22, y: -22)
+                            }
                         }
                         
                         CircularButton(
@@ -107,6 +136,17 @@ struct ResilienceView: View {
                         ) {
                             isShowingAddMenu = true
                         }
+                        
+                        // Debug button - only visible in debug builds
+                        #if DEBUG
+                        CircularButton(
+                            systemImage: "hammer.fill",
+                            accessibilityLabel: "Debug Tools",
+                            accessibilityHint: "Open debug and testing tools"
+                        ) {
+                            isShowingDebugView = true
+                        }
+                        #endif
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.horizontal, 20)
@@ -171,6 +211,9 @@ struct ResilienceView: View {
                         updateBadgeCount()
                     }
                 }
+            }
+            .sheet(isPresented: $isShowingDebugView) {
+                DebugView()
             }
         }
         .onAppear {

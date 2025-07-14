@@ -192,21 +192,24 @@ struct EpisodeSummaryView: View {
                     
                     ForEach(Array(orderedPrompts.enumerated()), id: \.offset) { index, promptKey in
                         if let response = prompts[promptKey] {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(promptKey)
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
+                            VStack(alignment: .leading, spacing: 16) {
+                                // Prompt and response section
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(promptKey)
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                    
+                                    Text(response)
+                                        .font(.body)
+                                        .foregroundColor(.secondary)
+                                }
                                 
-                                Text(response)
-                                    .font(.body)
-                                    .foregroundColor(.secondary)
-                                
-                                // Add check-in section if this prompt has an associated check-in
+                                // Separate check-in section with additional spacing
                                 if let checkInType = promptToCheckIn[promptKey], let episode = episode {
                                     VStack(alignment: .leading, spacing: 12) {
                                         Text(checkInType.displayName)
-                                            .font(.headline)  // Smaller than title3
-                                            .fontWeight(.medium)  // Less bold than semibold
+                                            .font(.headline)
+                                            .fontWeight(.medium)
                                         
                                         // Primary check-in button when window is active and no existing check-in
                                         if episode.checkIn(for: checkInType) == nil && episode.isCheckInWindowActive(for: checkInType) {
@@ -266,7 +269,7 @@ struct EpisodeSummaryView: View {
                                     }
                                     .padding()
                                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                                            }
+                                }
                             }
                             
                             // Add divider after each prompt except the last one
@@ -471,19 +474,42 @@ struct EmotionBarView: View {
 }
 
 #Preview {
+    let modelContainer = try! ModelContainer(for: Episode.self, EpisodeNote.self, CheckIn.self, configurations: .init(isStoredInMemoryOnly: true))
+    
+    // Create episode with all prompts including check-in prompts
     let episode = Episode(
-        title: "Test Episode",
-        emotions: ["Anger": 5, "Sadness": 3, "Fear": 2, "Anxiety": 4],
+        title: "Work Presentation Anxiety",
+        emotions: ["Anxiety": 5, "Stress": 4, "Fear": 3, "Overwhelm": 4],
         prompts: [
-            "Describe the episode": "I felt overwhelmed at work when...",
-            "What triggered it?": "A deadline was moved up unexpectedly",
-            "What do you need right now?": "Some time to breathe and reorganize",
-            "Let's give this episode a title": "Unexpected deadline change"
+            "Describe the episode": "I have a huge presentation tomorrow that I just found out about. My manager expects me to present our quarterly results to the entire leadership team. I feel completely unprepared and my hands are shaking just thinking about it.",
+            "How do you think you'll feel tomorrow?": "I'm terrified I'll mess up the presentation and embarrass myself in front of everyone. I'll probably be anxious all night and feel even worse in the morning.",
+            "How do you think you'll feel about this in 2 weeks?": "Hopefully by then I'll have gotten through it and learned that presentations aren't as scary as they seem. Maybe I'll even feel proud of myself for surviving it.",
+            "What's the worst that can happen?": "I could completely freeze up, forget everything I wanted to say, and look incompetent in front of the leadership team. They might lose confidence in me and it could affect my career.",
+            "How will you feel 3 months from now?": "This will probably just be another work challenge I overcame. I might even laugh about how anxious I was over something that turned out fine."
         ]
     )
+    
+    // Set episode date to 25 hours ago so 24h check-in window has passed
+    let calendar = Calendar.current
+    episode.date = calendar.date(byAdding: .hour, value: -25, to: Date()) ?? Date()
+    
+    // Add some notes
+    let note1 = EpisodeNote(text: "Practiced the presentation three times and felt a bit more confident. Still nervous but manageable.", episode: episode)
+    let note2 = EpisodeNote(text: "Remembered to use breathing techniques before the presentation. They really helped!", episode: episode)
+    
+    // Add a completed 24h check-in
+    let checkIn24h = CheckIn(text: "The presentation went better than expected! I was still nervous but I got through it without major issues. My manager even complimented my data analysis. Feeling relieved and a bit proud of myself.", checkInType: .twentyFourHour, episode: episode)
+    
+    // Insert into model context
+    modelContainer.mainContext.insert(episode)
+    modelContainer.mainContext.insert(note1)
+    modelContainer.mainContext.insert(note2)
+    modelContainer.mainContext.insert(checkIn24h)
+    
+    try! modelContainer.mainContext.save()
     
     return NavigationStack {
         EpisodeSummaryView(episode: episode)
     }
-    .modelContainer(for: [Episode.self, EpisodeNote.self, CheckIn.self], inMemory: true)
+    .modelContainer(modelContainer)
 }
