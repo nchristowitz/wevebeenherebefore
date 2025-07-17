@@ -39,13 +39,15 @@ final class Episode {
             
         case .twoWeek:
             let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) ?? self.date
-            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: targetDate) ?? targetDate
-            return now >= targetDate && now <= windowEnd
+            let windowStart = calendar.startOfDay(for: targetDate)
+            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: windowStart) ?? windowStart
+            return now >= windowStart && now <= windowEnd
             
         case .threeMonth:
             let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) ?? self.date
-            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: targetDate) ?? targetDate
-            return now >= targetDate && now <= windowEnd
+            let windowStart = calendar.startOfDay(for: targetDate)
+            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: windowStart) ?? windowStart
+            return now >= windowStart && now <= windowEnd
         }
     }
     
