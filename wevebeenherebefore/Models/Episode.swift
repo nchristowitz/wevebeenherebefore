@@ -9,6 +9,7 @@ final class Episode {
     var prompts: [String: String] // Store prompt title and response
     var createdAt: Date
     var notificationIDs: [String] = [] // Store notification IDs for cleanup
+    var dismissedCheckIns: [String] = [] // Store dismissed check-in types
     
     @Relationship(deleteRule: .cascade, inverse: \EpisodeNote.episode)
     var notes: [EpisodeNote] = []
@@ -46,7 +47,7 @@ final class Episode {
         case .threeMonth:
             let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) ?? self.date
             let windowStart = calendar.startOfDay(for: targetDate)
-            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: windowStart) ?? windowStart
+            let windowEnd = calendar.date(byAdding: .day, value: 5, to: windowStart) ?? windowStart
             return now >= windowStart && now <= windowEnd
         }
     }
@@ -57,6 +58,16 @@ final class Episode {
     
     func checkIn(for type: CheckInType) -> CheckIn? {
         return checkIns.first { $0.checkInType == type }
+    }
+    
+    func dismissCheckIn(for type: CheckInType) {
+        if !dismissedCheckIns.contains(type.rawValue) {
+            dismissedCheckIns.append(type.rawValue)
+        }
+    }
+    
+    func isCheckInDismissed(for type: CheckInType) -> Bool {
+        return dismissedCheckIns.contains(type.rawValue)
     }
     
     // Returns true if any check-in window is currently active and the check-in

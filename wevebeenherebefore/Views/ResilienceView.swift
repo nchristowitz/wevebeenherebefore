@@ -4,6 +4,7 @@ import SwiftData
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
+    @Query private var episodes: [Episode]
     @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
 
     @State private var isShowingDelight = false
@@ -62,11 +63,55 @@ struct ResilienceView: View {
         }
     }
     
+    var pendingCheckIns: [(episode: Episode, checkInType: CheckInType)] {
+        var pending: [(Episode, CheckInType)] = []
+        
+        for episode in episodes {
+            for checkInType in CheckInType.allCases {
+                if episode.isCheckInWindowActive(for: checkInType) && 
+                   !episode.hasCheckIn(for: checkInType) && 
+                   !episode.isCheckInDismissed(for: checkInType) {
+                    pending.append((episode, checkInType))
+                }
+            }
+        }
+        
+        return pending.sorted { first, second in
+            first.1.daysFromEpisode < second.1.daysFromEpisode
+        }
+    }
+    
     var body: some View {
         NavigationStack {
             ZStack {
                 // Main list content
                 List {
+                    // Check-in cards at the top
+                    ForEach(pendingCheckIns.indices, id: \.self) { index in
+                        let checkIn = pendingCheckIns[index]
+                        CheckInCard(
+                            episode: checkIn.episode,
+                            checkInType: checkIn.checkInType,
+                            onTap: {
+                                selectedEpisode = checkIn.episode
+                                checkInToShow = checkIn.checkInType
+                                showingCheckIn = true
+                            },
+                            onDismiss: {
+                                checkIn.episode.dismissCheckIn(for: checkIn.checkInType)
+                                do {
+                                    try modelContext.save()
+                                } catch {
+                                    print("Error dismissing check-in: \(error)")
+                                }
+                            }
+                        )
+                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                    }
+                    
+                    // Regular resilience cards
                     ForEach(filteredCards) { card in
                         CardView(card: card)
                             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
