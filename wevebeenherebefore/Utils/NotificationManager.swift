@@ -88,10 +88,16 @@ class NotificationManager: ObservableObject {
         content.badge = 1
         
         // Add episode data for when notification is tapped
+        // Store the persistent ID as a string - SwiftData will handle the lookup
+        let episodeIDString = "\(episode.persistentModelID)"
+        
         content.userInfo = [
-            "episodeID": "\(episode.persistentModelID)",
+            "episodeID": episodeIDString,
             "checkInType": checkInType.rawValue
         ]
+        
+        print("🔍 Storing episodeID in notification: '\(episodeIDString)'")
+        
         
         // Create trigger
         let calendar = Calendar.current

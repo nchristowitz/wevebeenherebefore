@@ -290,25 +290,44 @@ struct ResilienceView: View {
     }
     
     private func handleNotificationNavigation(_ navigation: NotificationCoordinator.PendingNavigation) {
+        print("🔍 Handling notification navigation for episode: \(navigation.episodeID), checkIn: \(navigation.checkInType.displayName)")
+        
         // Find the episode by ID
         let descriptor = FetchDescriptor<Episode>()
         
         do {
             let episodes = try modelContext.fetch(descriptor)
-            if let episode = episodes.first(where: { "\($0.persistentModelID)" == navigation.episodeID }) {
+            
+            print("🔍 Looking for episode ID: '\(navigation.episodeID)'")
+            print("🔍 Available episodes: \(episodes.count)")
+            
+            // Try to find episode by converting both IDs to strings for comparison
+            var foundEpisode: Episode?
+            for episode in episodes {
+                let episodeIDString = "\(episode.persistentModelID)"
+                print("  - Episode '\(episode.title)': '\(episodeIDString)'")
+                if episodeIDString == navigation.episodeID {
+                    foundEpisode = episode
+                    break
+                }
+            }
+            
+            if let episode = foundEpisode {
                 
                 // Check if this check-in already exists
                 let existingCheckIn = episode.checkIns.first { $0.checkInType == navigation.checkInType }
                 
                 if existingCheckIn == nil {
+                    print("✅ Found episode '\(episode.title)', navigating to \(navigation.checkInType.displayName) check-in")
+                    
                     // Navigate to check-in view
                     selectedEpisode = episode
                     checkInToShow = navigation.checkInType
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                showingCheckIn = true
-                    }
                     
-                    print("✅ Navigating to check-in: \(navigation.checkInType.displayName) for episode: \(episode.title)")
+                    // Use a small delay to ensure UI is ready for sheet presentation
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showingCheckIn = true
+                    }
                 } else {
                     print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
                     // Still clear the badge since user interacted with the notification

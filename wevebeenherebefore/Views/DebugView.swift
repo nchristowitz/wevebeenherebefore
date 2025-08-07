@@ -163,35 +163,53 @@ struct DebugView: View {
     }
     
     private func triggerTestNotification(_ checkInType: CheckInType) {
-        let content = UNMutableNotificationContent()
-        content.title = checkInType.displayName
-        content.body = "How are you feeling about your recent episode?"
-        content.sound = .default
-        content.badge = 1
+        // Find the most recent episode to use for the test
+        let descriptor = FetchDescriptor<Episode>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
         
-        // Set custom data for deep linking
-        content.userInfo = [
-            "checkInType": checkInType.rawValue,
-            "episodeId": "test-episode-id"
-        ]
-        
-        // Trigger immediately
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let request = UNNotificationRequest(
-            identifier: "test-\(checkInType.rawValue)-\(UUID().uuidString)",
-            content: content,
-            trigger: trigger
-        )
-        
-        UNUserNotificationCenter.current().add(request) { error in
-            DispatchQueue.main.async {
-                if let error = error {
-                    alertMessage = "Error scheduling notification: \(error.localizedDescription)"
-                } else {
-                    alertMessage = "Test \(checkInType.displayName) notification scheduled!"
-                }
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+            guard let latestEpisode = episodes.first else {
+                alertMessage = "No episodes found - create one first!"
                 showingAlert = true
+                return
             }
+            
+            let content = UNMutableNotificationContent()
+            content.title = checkInType.displayName
+            content.body = "How are you feeling about your recent episode?"
+            content.sound = .default
+            content.badge = 1
+            
+            // Use the actual episode ID from the latest episode
+            let episodeIDString = "\(latestEpisode.persistentModelID)"
+            content.userInfo = [
+                "checkInType": checkInType.rawValue,
+                "episodeID": episodeIDString
+            ]
+            
+            print("🔍 Debug notification using episode ID: '\(episodeIDString)' for episode: '\(latestEpisode.title)'")
+            
+            // Trigger immediately
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: "test-\(checkInType.rawValue)-\(UUID().uuidString)",
+                content: content,
+                trigger: trigger
+            )
+            
+            UNUserNotificationCenter.current().add(request) { error in
+                DispatchQueue.main.async {
+                    if let error = error {
+                        self.alertMessage = "Error scheduling notification: \(error.localizedDescription)"
+                    } else {
+                        self.alertMessage = "Test \(checkInType.displayName) notification scheduled for episode: '\(latestEpisode.title)'"
+                    }
+                    self.showingAlert = true
+                }
+            }
+        } catch {
+            alertMessage = "Error finding episodes: \(error.localizedDescription)"
+            showingAlert = true
         }
     }
     
