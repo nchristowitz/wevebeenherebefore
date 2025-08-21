@@ -7,22 +7,40 @@ struct ResilienceView: View {
     @Query private var episodes: [Episode]
     @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
 
-    @State private var isShowingDelight = false
-    @State private var isShowingMemory = false
-    @State private var isShowingTechnique = false
-    @State private var isShowingFilterMenu = false
-    @State private var isShowingEpisodeFlow = false
-    @State private var isShowingEpisodesList = false
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
     @State private var isShowingAddMenu = false
     @State private var isShowingEpisodeMenu = false
-    @State private var isShowingDebugView = false
+    @State private var isShowingFilterMenu = false
     
     // Navigation state for deep linking
     @State private var selectedEpisode: Episode?
     @State private var checkInToShow: CheckInType?
-    @State private var showingCheckIn = false
+    
+    // Consolidated sheet state
+    @State private var activeSheet: ActiveSheet?
+    
+    enum ActiveSheet: Identifiable {
+        case delight(Card? = nil)
+        case memory(Card? = nil) 
+        case technique(Card? = nil)
+        case episodeFlow
+        case episodesList
+        case checkIn(Episode, CheckInType)
+        case debug
+        
+        var id: String {
+            switch self {
+            case .delight: return "delight"
+            case .memory: return "memory"
+            case .technique: return "technique"
+            case .episodeFlow: return "episodeFlow"
+            case .episodesList: return "episodesList"
+            case .checkIn: return "checkIn"
+            case .debug: return "debug"
+            }
+        }
+    }
     
     // Check if there are pending check-ins
     private var hasPendingCheckIns: Bool {
@@ -63,23 +81,33 @@ struct ResilienceView: View {
         }
     }
     
-    var pendingCheckIns: [(episode: Episode, checkInType: CheckInType)] {
-        var pending: [(Episode, CheckInType)] = []
+    struct PendingCheckIn: Identifiable {
+        let episode: Episode
+        let checkInType: CheckInType
+        
+        var id: String {
+            "\(episode.persistentModelID)_\(checkInType.rawValue)"
+        }
+    }
+    
+    var pendingCheckIns: [PendingCheckIn] {
+        var pending: [PendingCheckIn] = []
         
         for episode in episodes {
             for checkInType in CheckInType.allCases {
                 if episode.isCheckInWindowActive(for: checkInType) && 
                    !episode.hasCheckIn(for: checkInType) && 
                    !episode.isCheckInDismissed(for: checkInType) {
-                    pending.append((episode, checkInType))
+                    pending.append(PendingCheckIn(episode: episode, checkInType: checkInType))
                 }
             }
         }
         
         return pending.sorted { first, second in
-            first.1.daysFromEpisode < second.1.daysFromEpisode
+            first.checkInType.daysFromEpisode < second.checkInType.daysFromEpisode
         }
     }
+    
     
     var body: some View {
         NavigationStack {
@@ -87,15 +115,12 @@ struct ResilienceView: View {
                 // Main list content
                 List {
                     // Check-in cards at the top
-                    ForEach(pendingCheckIns.indices, id: \.self) { index in
-                        let checkIn = pendingCheckIns[index]
+                    ForEach(pendingCheckIns) { checkIn in
                         CheckInCard(
                             episode: checkIn.episode,
                             checkInType: checkIn.checkInType,
                             onTap: {
-                                selectedEpisode = checkIn.episode
-                                checkInToShow = checkIn.checkInType
-                                showingCheckIn = true
+                                activeSheet = .checkIn(checkIn.episode, checkIn.checkInType)
                             },
                             onDismiss: {
                                 checkIn.episode.dismissCheckIn(for: checkIn.checkInType)
@@ -189,7 +214,7 @@ struct ResilienceView: View {
                             accessibilityLabel: "Debug Tools",
                             accessibilityHint: "Open debug and testing tools"
                         ) {
-                            isShowingDebugView = true
+                            activeSheet = .debug
                         }
                         #endif
                     }
@@ -204,61 +229,102 @@ struct ResilienceView: View {
                 }
                 
                 MenuTray(title: "Add a resilience card", isPresented: $isShowingAddMenu) {
-                    AddCardMenu(
-                        isShowingDelight: $isShowingDelight,
-                        isShowingMemory: $isShowingMemory,
-                        isShowingTechnique: $isShowingTechnique,
-                        isPresented: $isShowingAddMenu
-                    )
+                    VStack(spacing: 12) {
+                        MenuButton(
+                            title: "Add Delight",
+                            icon: "heart.fill",
+                            action: {
+                                isShowingAddMenu = false
+                                activeSheet = .delight()
+                            }
+                        )
+                        
+                        MenuButton(
+                            title: "Add Memory",
+                            icon: "book",
+                            action: {
+                                isShowingAddMenu = false
+                                activeSheet = .memory()
+                            }
+                        )
+                        
+                        MenuButton(
+                            title: "Add Technique",
+                            icon: "figure.mind.and.body",
+                            action: {
+                                isShowingAddMenu = false
+                                activeSheet = .technique()
+                            }
+                        )
+                    }
+                    .padding(.horizontal)
                 }
                 
                 MenuTray(title: "Episodes", isPresented: $isShowingEpisodeMenu) {
-                    EpisodeMenu(
-                        isShowingEpisodeFlow: $isShowingEpisodeFlow,
-                        isShowingEpisodeList: $isShowingEpisodesList,
-                        isPresented: $isShowingEpisodeMenu
-                    )
+                    VStack(spacing: 12) {
+                        MenuButton(
+                            title: "I'm having an episode",
+                            icon: "tornado",
+                            action: {
+                                isShowingEpisodeMenu = false
+                                activeSheet = .episodeFlow
+                            }
+                        )
+                        
+                        MenuButton(
+                            title: "View my episodes",
+                            icon: "list.bullet",
+                            action: {
+                                isShowingEpisodeMenu = false
+                                activeSheet = .episodesList
+                            }
+                        )
+                        .overlay(
+                            Group {
+                                if hasPendingCheckIns {
+                                    NotificationDot()
+                                        .offset(x: 2, y: -2)
+                                }
+                            }, alignment: .topTrailing
+                        )
+                    }
+                    .padding(.horizontal)
                 }
             }
-            .sheet(isPresented: $isShowingDelight) {
-                AddDelightView()
-            }
-            .sheet(isPresented: $isShowingMemory) {
-                AddMemoryView()
-            }
-            .sheet(isPresented: $isShowingTechnique) {
-                AddTechniqueView()
-            }
-            .sheet(isPresented: $isShowingEpisodeFlow) {
-                EpisodeFlowCoordinator()
-                    .interactiveDismissDisabled()
-            }
-            .sheet(isPresented: $isShowingEpisodesList) {
-                EpisodesListView()
-            }
-            .sheet(item: $editingCard) { card in
-                switch card.type {
-                case .memory:
-                    AddMemoryView(existingCard: card)
-                case .delight:
-                    AddDelightView(existingCard: card)
-                case .technique:
-                    AddTechniqueView(existingCard: card)
-                }
-            }
-            .sheet(isPresented: $showingCheckIn) {
-                if let episode = selectedEpisode, let checkInType = checkInToShow {
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .delight(let existingCard):
+                    AddDelightView(existingCard: existingCard)
+                case .memory(let existingCard):
+                    AddMemoryView(existingCard: existingCard)
+                case .technique(let existingCard):
+                    AddTechniqueView(existingCard: existingCard)
+                case .episodeFlow:
+                    EpisodeFlowCoordinator()
+                        .interactiveDismissDisabled()
+                case .episodesList:
+                    EpisodesListView()
+                case .checkIn(let episode, let checkInType):
                     CheckInView(episode: episode, checkInType: checkInType) {
-                        // Called when check-in is completed
-                        showingCheckIn = false
-                        selectedEpisode = nil
-                        checkInToShow = nil
+                        activeSheet = nil
                         updateBadgeCount()
                     }
+                case .debug:
+                    DebugView()
                 }
             }
-            .sheet(isPresented: $isShowingDebugView) {
-                DebugView()
+            .onChange(of: editingCard) { _, card in
+                if let card = card {
+                    switch card.type {
+                    case .memory:
+                        activeSheet = .memory(card)
+                    case .delight:
+                        activeSheet = .delight(card)
+                    case .technique:
+                        activeSheet = .technique(card)
+                    }
+                    editingCard = nil
+                }
             }
         }
         .onAppear {
@@ -321,13 +387,7 @@ struct ResilienceView: View {
                     print("✅ Found episode '\(episode.title)', navigating to \(navigation.checkInType.displayName) check-in")
                     
                     // Navigate to check-in view
-                    selectedEpisode = episode
-                    checkInToShow = navigation.checkInType
-                    
-                    // Use a small delay to ensure UI is ready for sheet presentation
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        showingCheckIn = true
-                    }
+                    activeSheet = .checkIn(episode, navigation.checkInType)
                 } else {
                     print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
                     // Still clear the badge since user interacted with the notification
