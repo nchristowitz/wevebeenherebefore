@@ -85,7 +85,8 @@ class NotificationManager: ObservableObject {
         content.body = notificationMessage(for: checkInType, episodeTitle: episode.title)
         content.sound = .default
         content.categoryIdentifier = "EPISODE_CHECKIN"
-        content.badge = 1
+        // Badge will be set by the notification when it fires - iOS will increment automatically
+        content.badge = NSNumber(value: 1)
         
         // Add episode data for when notification is tapped
         // Store the persistent ID as a string - SwiftData will handle the lookup

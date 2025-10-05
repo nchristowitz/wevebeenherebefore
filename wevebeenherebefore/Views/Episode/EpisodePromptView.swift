@@ -98,12 +98,18 @@ struct EpisodePrompt: Identifiable, Equatable {
             ),
             EpisodePrompt(
                 id: 4,
+                question: "What would Christina say?",
+                placeholder: "Imagine she's here with you now, guiding you through this.",
+                isLast: false
+            ),
+            EpisodePrompt(
+                id: 5,
                 question: "How will you feel 3 months from now?",
                 placeholder: "Think about the bigger picture",
                 isLast: false
             ),
             EpisodePrompt(
-                id: 5,
+                id: 6,
                 question: "Let's give this episode a title",
                 placeholder: "Keep it short but recognizable to future you",
                 isLast: true
