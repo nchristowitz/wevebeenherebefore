@@ -31,7 +31,7 @@ struct CheckInCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(checkInType.displayName)
                         .font(.headline)
                         .fontWeight(.semibold)
@@ -51,15 +51,12 @@ struct CheckInCard: View {
                     .font(.title2)
                     .opacity(0.7)
             }
-            .padding(16)
+            .padding(24)
         }
         .background(Color(.systemBackground))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.blue.opacity(0.3), lineWidth: 2)
-        )
+
         .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()
@@ -81,6 +78,8 @@ struct CheckInCard: View {
 }
 
 #Preview {
+    @Previewable @State var isPreview = true
+    
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: Episode.self, configurations: config)
     
@@ -97,6 +96,26 @@ struct CheckInCard: View {
             checkInType: .threeMonth,
             onTap: { print("Tapped") },
             onDismiss: { print("Dismissed") }
+        )
+        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        
+        CheckInCard(
+            episode: sampleEpisode,
+            checkInType: .twentyFourHour,
+            onTap: { print("Tapped 24h") },
+            onDismiss: { print("Dismissed 24h") }
+        )
+        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        
+        CheckInCard(
+            episode: sampleEpisode,
+            checkInType: .twoWeek,
+            onTap: { print("Tapped 2w") },
+            onDismiss: { print("Dismissed 2w") }
         )
         .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
         .listRowBackground(Color.clear)
