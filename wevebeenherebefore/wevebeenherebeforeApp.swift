@@ -63,7 +63,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 @main
 struct wevebeenherebeforeApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    
+
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
             Card.self,
@@ -82,8 +82,53 @@ struct wevebeenherebeforeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ResilienceView()
+            MainTabView()
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+struct MainTabView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var episodes: [Episode]
+    @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
+
+    // Calculate pending check-ins count for badge
+    private var pendingCheckInsCount: Int {
+        var count = 0
+        for episode in episodes {
+            for checkInType in CheckInType.allCases {
+                if episode.isCheckInWindowActive(for: checkInType) &&
+                   !episode.hasCheckIn(for: checkInType) &&
+                   !episode.isCheckInDismissed(for: checkInType) {
+                    count += 1
+                }
+            }
+        }
+        return count
+    }
+
+    var body: some View {
+        TabView(selection: $notificationCoordinator.selectedTab) {
+            EpisodesListView()
+                .tabItem {
+                    Label("Episodes", systemImage: "tornado")
+                }
+                .badge(pendingCheckInsCount > 0 ? pendingCheckInsCount : 0)
+                .tag(AppTab.episodes)
+
+            ResilienceView()
+                .tabItem {
+                    Label("Resilience", systemImage: "heart.fill")
+                }
+                .tag(AppTab.resilience)
+
+            SettingsView()
+                .tabItem {
+                    Label("Settings", systemImage: "gearshape")
+                }
+                .tag(AppTab.settings)
+        }
+        .tint(.primary)
     }
 }

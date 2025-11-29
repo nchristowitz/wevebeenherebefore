@@ -1,10 +1,22 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 struct EpisodesListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Episode.createdAt, order: .reverse) private var episodes: [Episode]
-    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
+
+    @State private var isShowingEpisodeFlow = false
+    @State private var activeSheet: ActiveSheet?
+
+    enum ActiveSheet: Identifiable {
+        case checkIn(Episode, CheckInType)
+
+        var id: String {
+            "checkIn"
+        }
+    }
 
     // Group episodes by month and year
     private var groupedEpisodes: [(key: String, episodes: [Episode])] {
@@ -30,45 +42,102 @@ struct EpisodesListView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(groupedEpisodes, id: \.key) { group in
-                    Section(header: Text(group.key).font(.headline).textCase(nil)) {
-                        ForEach(group.episodes) { episode in
-                            NavigationLink(value: episode) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(episode.title)
-                                            .font(.headline)
+            ZStack {
+                List {
+                    ForEach(groupedEpisodes, id: \.key) { group in
+                        Section(header: Text(group.key).font(.headline).textCase(nil)) {
+                            ForEach(group.episodes) { episode in
+                                NavigationLink(value: episode) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(episode.title)
+                                                .font(.headline)
 
-                                        Text(episode.date, format: .dateTime.month().day())
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.vertical, 4)
+                                            Text(episode.date, format: .dateTime.month().day())
+                                                .font(.subheadline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .padding(.vertical, 4)
 
-                                    Spacer()
+                                        Spacer()
 
-                                    if episode.hasPendingCheckIn {
-                                        NotificationDot()
+                                        if episode.hasPendingCheckIn {
+                                            NotificationDot()
+                                        }
                                     }
                                 }
                             }
-                        }
-                        .onDelete { offsets in
-                            deleteEpisodesInGroup(group: group.episodes, offsets: offsets)
+                            .onDelete { offsets in
+                                deleteEpisodesInGroup(group: group.episodes, offsets: offsets)
+                            }
                         }
                     }
                 }
-            }
-            .navigationDestination(for: Episode.self) { episode in
-                EpisodeSummaryView(episode: episode)
-            }
-            .navigationTitle("My Episodes")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Done") {
-                        dismiss()
+                .navigationDestination(for: Episode.self) { episode in
+                    EpisodeSummaryView(episode: episode)
+                }
+
+                // Floating '+' button for starting episode flow
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        Button(action: {
+                            isShowingEpisodeFlow = true
+                        }) {
+                            if #available(iOS 26.0, *) {
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 60, height: 60)
+                                    .glassEffect()
+                            } else {
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 60, height: 60)
+                                    .background(
+                                        Circle()
+                                            .fill(.thickMaterial)
+                                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                                    )
+                            }
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                        .accessibilityLabel("Start Episode")
+                        .accessibilityHint("Begin tracking a new emotional episode")
                     }
+                }
+            }
+            .navigationTitle("Episodes")
+            .sheet(isPresented: $isShowingEpisodeFlow) {
+                EpisodeFlowCoordinator()
+                    .interactiveDismissDisabled()
+            }
+            .sheet(item: $activeSheet) { sheet in
+                switch sheet {
+                case .checkIn(let episode, let checkInType):
+                    CheckInView(episode: episode, checkInType: checkInType) {
+                        activeSheet = nil
+                        updateBadgeCount()
+                    }
+                }
+            }
+            .onAppear {
+                // Handle deep link navigation from notifications
+                if let navigation = notificationCoordinator.pendingNavigation {
+                    handleNotificationNavigation(navigation)
+                    notificationCoordinator.clearPendingNavigation()
+                }
+            }
+            .onChange(of: notificationCoordinator.pendingNavigation) { _, pendingNav in
+                // Handle deep link navigation from notifications
+                if let navigation = pendingNav {
+                    handleNotificationNavigation(navigation)
+                    notificationCoordinator.clearPendingNavigation()
                 }
             }
         }
@@ -88,6 +157,83 @@ struct EpisodesListView: View {
             } catch {
                 print("Error deleting episodes: \(error)")
             }
+        }
+    }
+
+    private func handleNotificationNavigation(_ navigation: NotificationCoordinator.PendingNavigation) {
+        print("🔍 Handling notification navigation for episode: \(navigation.episodeID), checkIn: \(navigation.checkInType.displayName)")
+
+        // Find the episode by ID
+        let descriptor = FetchDescriptor<Episode>()
+
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+
+            print("🔍 Looking for episode ID: '\(navigation.episodeID)'")
+            print("🔍 Available episodes: \(episodes.count)")
+
+            // Try to find episode by converting both IDs to strings for comparison
+            var foundEpisode: Episode?
+            for episode in episodes {
+                let episodeIDString = "\(episode.persistentModelID)"
+                print("  - Episode '\(episode.title)': '\(episodeIDString)'")
+                if episodeIDString == navigation.episodeID {
+                    foundEpisode = episode
+                    break
+                }
+            }
+
+            if let episode = foundEpisode {
+                // Check if this check-in already exists
+                let existingCheckIn = episode.checkIns.first { $0.checkInType == navigation.checkInType }
+
+                if existingCheckIn == nil {
+                    print("✅ Found episode '\(episode.title)', navigating to \(navigation.checkInType.displayName) check-in")
+
+                    // Navigate to check-in view
+                    activeSheet = .checkIn(episode, navigation.checkInType)
+                } else {
+                    print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
+                    // Still clear the badge since user interacted with the notification
+                    updateBadgeCount()
+                }
+            } else {
+                print("❌ Episode not found for ID: \(navigation.episodeID)")
+            }
+        } catch {
+            print("❌ Error fetching episodes: \(error)")
+        }
+    }
+
+    private func updateBadgeCount() {
+        // Count pending check-ins across all episodes
+        let descriptor = FetchDescriptor<Episode>()
+
+        do {
+            let episodes = try modelContext.fetch(descriptor)
+            var pendingCount = 0
+
+            for episode in episodes {
+                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
+                for checkInType in CheckInType.allCases {
+                    if !completedCheckInTypes.contains(checkInType) &&
+                       !episode.isCheckInDismissed(for: checkInType) &&
+                       episode.isCheckInWindowActive(for: checkInType) {
+                        pendingCount += 1
+                    }
+                }
+            }
+
+            DispatchQueue.main.async {
+                // Clear delivered notifications from notification center
+                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+                // Update badge to reflect actual pending count
+                UNUserNotificationCenter.current().setBadgeCount(pendingCount)
+                print("📱 Updated badge count to: \(pendingCount)")
+            }
+        } catch {
+            print("❌ Error updating badge count: \(error)")
+            UNUserNotificationCenter.current().setBadgeCount(0)
         }
     }
 }

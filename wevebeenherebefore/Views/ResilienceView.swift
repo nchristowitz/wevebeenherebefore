@@ -9,35 +9,22 @@ struct ResilienceView: View {
 
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
-    @State private var isShowingAddMenu = false
-    @State private var isShowingEpisodeMenu = false
-    @State private var isShowingFilterMenu = false
-    
-    // Navigation state for deep linking
-    @State private var selectedEpisode: Episode?
-    @State private var checkInToShow: CheckInType?
-    
+
     // Consolidated sheet state
     @State private var activeSheet: ActiveSheet?
-    
+
     enum ActiveSheet: Identifiable {
         case delight(Card? = nil)
-        case memory(Card? = nil) 
+        case memory(Card? = nil)
         case technique(Card? = nil)
-        case episodeFlow
-        case episodesList
         case checkIn(Episode, CheckInType)
-        case debug
-        
+
         var id: String {
             switch self {
             case .delight: return "delight"
             case .memory: return "memory"
             case .technique: return "technique"
-            case .episodeFlow: return "episodeFlow"
-            case .episodesList: return "episodesList"
             case .checkIn: return "checkIn"
-            case .debug: return "debug"
             }
         }
     }
@@ -136,7 +123,7 @@ struct ResilienceView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     }
-                    
+
                     // Regular resilience cards
                     ForEach(filteredCards) { card in
                         CardView(card: card)
@@ -156,7 +143,7 @@ struct ResilienceView: View {
                                 }
                                 .accessibilityLabel("Delete card")
                                 .accessibilityHint("Permanently remove this \(card.type.rawValue) card")
-                                
+
                                 Button {
                                     editingCard = card
                                 } label: {
@@ -170,126 +157,129 @@ struct ResilienceView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                
+
+                // Floating '+' button for adding cards
                 VStack {
                     Spacer()
-                
-                    // Bottom buttons
-                    HStack(spacing: 24) {
-                        CircularButton(
-                            systemImage: "gearshape",
-                            accessibilityLabel: "Settings",
-                            accessibilityHint: "Open settings and filter menu"
-                        ) {
-                            isShowingFilterMenu = true
-                        }
-                        
-                        ZStack {
-                            CircularButton(
-                                systemImage: "tornado",
-                                accessibilityLabel: "Episodes",
-                                accessibilityHint: "View and manage emotional episodes"
-                            ) {
-                                isShowingEpisodeMenu = true
-                            }
-                            
-                            // Notification dot for pending check-ins
-                            if hasPendingCheckIns {
-                                NotificationDot()
-                                    .offset(x: 22, y: -22)
-                            }
-                        }
-                        
-                        CircularButton(
-                            systemImage: "plus",
-                            accessibilityLabel: "Add Card",
-                            accessibilityHint: "Add a new resilience card"
-                        ) {
-                            isShowingAddMenu = true
-                        }
-                        
-                        // Debug button - only visible in debug builds
-                        #if DEBUG
-                        CircularButton(
-                            systemImage: "hammer.fill",
-                            accessibilityLabel: "Debug Tools",
-                            accessibilityHint: "Open debug and testing tools"
-                        ) {
-                            activeSheet = .debug
-                        }
-                        #endif
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 16)
-                }
-                
-                // Menu trays (always in view hierarchy)
-                MenuTray(title: "Settings", isPresented: $isShowingFilterMenu) {
-                    SettingsMenu(selectedFilter: $selectedFilter, isPresented: $isShowingFilterMenu)
-                }
-                
-                MenuTray(title: "Add a resilience card", isPresented: $isShowingAddMenu) {
-                    VStack(spacing: 12) {
-                        MenuButton(
-                            title: "Add Delight",
-                            icon: "heart.fill",
-                            action: {
-                                isShowingAddMenu = false
+                    HStack {
+                        Spacer()
+                        Menu {
+                            Button(action: {
                                 activeSheet = .delight()
+                            }) {
+                                Label("Add Delight", systemImage: "heart.fill")
                             }
-                        )
-                        
-                        MenuButton(
-                            title: "Add Memory",
-                            icon: "book",
-                            action: {
-                                isShowingAddMenu = false
+
+                            Button(action: {
                                 activeSheet = .memory()
+                            }) {
+                                Label("Add Memory", systemImage: "book")
                             }
-                        )
-                        
-                        MenuButton(
-                            title: "Add Technique",
-                            icon: "figure.mind.and.body",
-                            action: {
-                                isShowingAddMenu = false
+
+                            Button(action: {
                                 activeSheet = .technique()
+                            }) {
+                                Label("Add Technique", systemImage: "figure.mind.and.body")
                             }
-                        )
+                        } label: {
+                            if #available(iOS 26.0, *) {
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 60, height: 60)
+                                    .glassEffect()
+                            } else {
+                                Image(systemName: "plus")
+                                    .font(.title2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 60, height: 60)
+                                    .background(
+                                        Circle()
+                                            .fill(.thickMaterial)
+                                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                                    )
+                            }
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
+                        .accessibilityLabel("Add Card")
+                        .accessibilityHint("Add a new resilience card")
                     }
-                    .padding(.horizontal)
                 }
-                
-                MenuTray(title: "Episodes", isPresented: $isShowingEpisodeMenu) {
-                    VStack(spacing: 12) {
-                        MenuButton(
-                            title: "I'm having an episode",
-                            icon: "tornado",
-                            action: {
-                                isShowingEpisodeMenu = false
-                                activeSheet = .episodeFlow
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("")
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button(action: {
+                            selectedFilter = selectedFilter == .memory ? nil : .memory
+                        }) {
+                            if selectedFilter == .memory {
+                                Label("Memories", systemImage: "checkmark")
+                            } else {
+                                Label("Memories", systemImage: "book")
                             }
-                        )
-                        
-                        MenuButton(
-                            title: "View my episodes",
-                            icon: "list.bullet",
-                            action: {
-                                isShowingEpisodeMenu = false
-                                activeSheet = .episodesList
+                        }
+
+                        Button(action: {
+                            selectedFilter = selectedFilter == .delight ? nil : .delight
+                        }) {
+                            if selectedFilter == .delight {
+                                Label("Delights", systemImage: "checkmark")
+                            } else {
+                                Label("Delights", systemImage: "heart.fill")
                             }
-                        )
-                        .overlay(
-                            Group {
-                                if hasPendingCheckIns {
-                                    NotificationDot()
-                                        .offset(x: 2, y: -2)
-                                }
-                            }, alignment: .topTrailing
-                        )
+                        }
+
+                        Button(action: {
+                            selectedFilter = selectedFilter == .technique ? nil : .technique
+                        }) {
+                            if selectedFilter == .technique {
+                                Label("Techniques", systemImage: "checkmark")
+                            } else {
+                                Label("Techniques", systemImage: "figure.mind.and.body")
+                            }
+                        }
+
+                        Button(action: {
+                            selectedFilter = selectedFilter == .imagesOnly ? nil : .imagesOnly
+                        }) {
+                            if selectedFilter == .imagesOnly {
+                                Label("Images Only", systemImage: "checkmark")
+                            } else {
+                                Label("Images Only", systemImage: "photo")
+                            }
+                        }
+
+                        Button(action: {
+                            selectedFilter = selectedFilter == .dateOldest ? nil : .dateOldest
+                        }) {
+                            if selectedFilter == .dateOldest {
+                                Label("Oldest First", systemImage: "checkmark")
+                            } else {
+                                Label("Oldest First", systemImage: "arrow.up.circle")
+                            }
+                        }
+
+                        if selectedFilter != nil {
+                            Divider()
+
+                            Button(action: {
+                                selectedFilter = nil
+                            }) {
+                                Label("Clear Filter", systemImage: "xmark.circle")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: selectedFilter != nil ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            .foregroundColor(.primary)
                     }
-                    .padding(.horizontal)
+                    .accessibilityLabel("Filter")
+                    .accessibilityHint("Filter resilience cards")
                 }
             }
             .sheet(item: $activeSheet) { sheet in
@@ -300,18 +290,11 @@ struct ResilienceView: View {
                     AddMemoryView(existingCard: existingCard)
                 case .technique(let existingCard):
                     AddTechniqueView(existingCard: existingCard)
-                case .episodeFlow:
-                    EpisodeFlowCoordinator()
-                        .interactiveDismissDisabled()
-                case .episodesList:
-                    EpisodesListView()
                 case .checkIn(let episode, let checkInType):
                     CheckInView(episode: episode, checkInType: checkInType) {
                         activeSheet = nil
                         updateBadgeCount()
                     }
-                case .debug:
-                    DebugView()
                 }
             }
             .onChange(of: editingCard) { _, card in
@@ -331,74 +314,15 @@ struct ResilienceView: View {
         .onAppear {
             // Update badge count synchronously
             updateBadgeCount()
-            
-            // Navigate to pending check-in if a notification was tapped before the view appeared
-            if let navigation = notificationCoordinator.pendingNavigation {
-                handleNotificationNavigation(navigation)
-                notificationCoordinator.clearPendingNavigation()
-            }
-            
+
             // Check permissions in background
             Task.detached {
                 await NotificationManager.shared.checkPermission()
             }
         }
-        .onChange(of: notificationCoordinator.pendingNavigation) { _, pendingNav in
-            // Handle deep link navigation from notifications
-            if let navigation = pendingNav {
-                handleNotificationNavigation(navigation)
-                notificationCoordinator.clearPendingNavigation()
-            }
-        }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             // Update badge count when app becomes active
             updateBadgeCount()
-        }
-    }
-    
-    private func handleNotificationNavigation(_ navigation: NotificationCoordinator.PendingNavigation) {
-        print("🔍 Handling notification navigation for episode: \(navigation.episodeID), checkIn: \(navigation.checkInType.displayName)")
-        
-        // Find the episode by ID
-        let descriptor = FetchDescriptor<Episode>()
-        
-        do {
-            let episodes = try modelContext.fetch(descriptor)
-            
-            print("🔍 Looking for episode ID: '\(navigation.episodeID)'")
-            print("🔍 Available episodes: \(episodes.count)")
-            
-            // Try to find episode by converting both IDs to strings for comparison
-            var foundEpisode: Episode?
-            for episode in episodes {
-                let episodeIDString = "\(episode.persistentModelID)"
-                print("  - Episode '\(episode.title)': '\(episodeIDString)'")
-                if episodeIDString == navigation.episodeID {
-                    foundEpisode = episode
-                    break
-                }
-            }
-            
-            if let episode = foundEpisode {
-                
-                // Check if this check-in already exists
-                let existingCheckIn = episode.checkIns.first { $0.checkInType == navigation.checkInType }
-                
-                if existingCheckIn == nil {
-                    print("✅ Found episode '\(episode.title)', navigating to \(navigation.checkInType.displayName) check-in")
-                    
-                    // Navigate to check-in view
-                    activeSheet = .checkIn(episode, navigation.checkInType)
-                } else {
-                    print("ℹ️ Check-in already completed for \(navigation.checkInType.displayName)")
-                    // Still clear the badge since user interacted with the notification
-                    updateBadgeCount()
-                }
-            } else {
-                print("❌ Episode not found for ID: \(navigation.episodeID)")
-            }
-        } catch {
-            print("❌ Error fetching episodes: \(error)")
         }
     }
     
