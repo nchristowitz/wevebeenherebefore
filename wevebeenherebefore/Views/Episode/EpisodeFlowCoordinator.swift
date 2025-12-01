@@ -19,12 +19,18 @@ class EpisodeFlowState: ObservableObject {
         case emotionRating
         case prompt(EpisodePrompt)
         case summary
-        
+        case remember
+        case resilienceReminders
+
         static func == (lhs: EpisodeStep, rhs: EpisodeStep) -> Bool {
             switch (lhs, rhs) {
             case (.emotionRating, .emotionRating):
                 return true
             case (.summary, .summary):
+                return true
+            case (.remember, .remember):
+                return true
+            case (.resilienceReminders, .resilienceReminders):
                 return true
             case let (.prompt(lhsPrompt), .prompt(rhsPrompt)):
                 return lhsPrompt == rhsPrompt
@@ -53,6 +59,10 @@ class EpisodeFlowState: ObservableObject {
                 }
             }
         case .summary:
+            currentStep = .remember
+        case .remember:
+            currentStep = .resilienceReminders
+        case .resilienceReminders:
             break
         }
     }
@@ -72,11 +82,21 @@ class EpisodeFlowState: ObservableObject {
             }
         case .summary:
             currentStep = .prompt(EpisodePrompt.prompts.last!)
+        case .remember:
+            currentStep = .summary
+        case .resilienceReminders:
+            currentStep = .remember
         }
     }
     
     var shouldShowCloseButton: Bool {
         if case .summary = currentStep {
+            return false
+        }
+        if case .remember = currentStep {
+            return false
+        }
+        if case .resilienceReminders = currentStep {
             return false
         }
         return true
@@ -87,7 +107,8 @@ struct EpisodeFlowCoordinator: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @StateObject private var state = EpisodeFlowState()
-    
+    @State private var savedEpisode: Episode?
+
     var body: some View {
         NavigationStack {
             Group {
@@ -97,7 +118,7 @@ struct EpisodeFlowCoordinator: View {
                         state.emotions = emotions
                         state.moveToNext()
                     }
-                    
+
                 case .prompt(let prompt):
                     if prompt.isLast {
                         EpisodeTitlePromptView(
@@ -122,17 +143,30 @@ struct EpisodeFlowCoordinator: View {
                             }
                         )
                     }
-                    
+
                 case .summary:
                     EpisodeSummaryView(
                         emotions: state.emotions,
                         prompts: state.responses,
                         title: state.responses["Let's give this episode a title"] ?? "",
                         onSave: {
-                            saveEpisode()
-                            dismiss()
+                            let episode = saveEpisode()
+                            savedEpisode = episode
+                            state.moveToNext()
                         }
                     )
+
+                case .remember:
+                    if let episode = savedEpisode {
+                        RememberView(currentEpisode: episode) {
+                            state.moveToNext()
+                        }
+                    }
+
+                case .resilienceReminders:
+                    ResilienceRemindersView {
+                        dismiss()
+                    }
                 }
             }
             .toolbar {
@@ -158,7 +192,7 @@ struct EpisodeFlowCoordinator: View {
         }
     }
     
-    private func saveEpisode() {
+    private func saveEpisode() -> Episode {
         let title = state.responses[EpisodePrompt.prompts.last?.question ?? ""] ?? ""
         let episode = Episode(
             title: title,
@@ -166,20 +200,20 @@ struct EpisodeFlowCoordinator: View {
             prompts: state.responses
         )
         modelContext.insert(episode)
-        
+
         // Enhanced notification scheduling with better error handling
         Task {
             // Always check permission first
             await NotificationManager.shared.checkPermission()
-            
+
             if !NotificationManager.shared.hasPermission {
                 // Request permission
                 await NotificationManager.shared.requestPermission()
-                
+
                 // Check again after request
                 await NotificationManager.shared.checkPermission()
             }
-            
+
             if NotificationManager.shared.hasPermission {
                 let scheduledIDs = NotificationManager.shared.scheduleCheckInNotifications(for: episode)
                 episode.notificationIDs = scheduledIDs
@@ -187,6 +221,8 @@ struct EpisodeFlowCoordinator: View {
                 print("⚠️ Notifications not scheduled - permission denied")
             }
         }
+
+        return episode
     }
 }
 
