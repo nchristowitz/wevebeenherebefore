@@ -12,7 +12,7 @@ struct CardTextEditor: View {
             .focused($isFocused)
             .scrollContentBackground(.hidden)
             .background(.clear)
-            .frame(maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .font(.system(size: 32, weight: .regular, design: .default))
             .foregroundColor(textColor)
             .overlay(
@@ -22,6 +22,7 @@ struct CardTextEditor: View {
                             .font(.system(size: 32, weight: .regular, design: .default))
                             .foregroundColor(textColor.opacity(0.5))
                             .allowsHitTesting(false)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                             .padding(.leading, 5)
                             .padding(.top, 8)
                     }

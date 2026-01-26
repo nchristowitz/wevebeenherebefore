@@ -4,7 +4,7 @@ import SwiftData
 struct AddCardBaseView<Content: View>: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    
+
     let type: CardType
     @State private var text: String = ""
     @Binding var selectedColor: Color
@@ -12,19 +12,21 @@ struct AddCardBaseView<Content: View>: View {
     let imageData: Data?
     let content: () -> Content
     let existingCard: Card?
-    
-    init(type: CardType, selectedColor: Binding<Color>, imageData: Data? = nil, existingCard: Card? = nil, @ViewBuilder content: @escaping () -> Content) {
+
+    init(type: CardType, selectedColor: Binding<Color>, imageData: Data? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.type = type
         self._selectedColor = selectedColor
         self.imageData = imageData
         self.existingCard = existingCard
         self.content = content
-        
+
         if let card = existingCard {
             _text = State(initialValue: card.text)
             if let date = card.date {
                 _selectedDate = State(initialValue: date)
             }
+        } else if let initialText = initialText {
+            _text = State(initialValue: initialText)
         }
     }
     
@@ -33,45 +35,38 @@ struct AddCardBaseView<Content: View>: View {
             ZStack {
                 selectedColor
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
-                            if let imageData = imageData,
-                               let uiImage = UIImage(data: imageData) {
-                                ZStack(alignment: .topTrailing) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(maxHeight: 200)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    
-                                    Button(action: {
-                                        // Handle image removal through parent view
-                                    }) {
-                                        Image(systemName: "xmark.circle.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundStyle(.white, Color.black.opacity(0.5))
-                                            .background(Circle().fill(.white))
-                                            .offset(x: 8, y: -8)
-                                    }
-                                }
-                                .padding(.horizontal)
+                    if let imageData = imageData,
+                       let uiImage = UIImage(data: imageData) {
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(maxHeight: 200)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Button(action: {
+                                // Handle image removal through parent view
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundStyle(.white, Color.black.opacity(0.5))
+                                    .background(Circle().fill(.white))
+                                    .offset(x: 8, y: -8)
                             }
-                            
-                            CardTextEditor(
-                                text: $text,
-                                placeholder: AppConfig.cardPlaceholders[type] ?? "",
-                                textColor: selectedColor.contrastingTextColor()
-                            )
-                            .frame(minHeight: 200)
                         }
-                        .frame(maxWidth: .infinity)
                         .padding(.horizontal)
+                        .padding(.top)
                     }
-                    
-                    Spacer()
-                    
+
+                    CardTextEditor(
+                        text: $text,
+                        placeholder: AppConfig.cardPlaceholders[type] ?? "",
+                        textColor: selectedColor.contrastingTextColor()
+                    )
+                    .padding(.horizontal)
+
                     content()
                 }
             }

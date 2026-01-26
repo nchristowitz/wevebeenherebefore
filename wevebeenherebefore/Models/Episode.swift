@@ -10,19 +10,35 @@ final class Episode {
     var createdAt: Date
     var notificationIDs: [String] = [] // Store notification IDs for cleanup
     var dismissedCheckIns: [String] = [] // Store dismissed check-in types
-    
+    var summary: String?
+    var summaryCreatedAt: Date?
+
     @Relationship(deleteRule: .cascade, inverse: \EpisodeNote.episode)
     var notes: [EpisodeNote] = []
-    
+
     @Relationship(deleteRule: .cascade, inverse: \CheckIn.episode)
     var checkIns: [CheckIn] = []
-    
+
     init(title: String, emotions: [String: Int], prompts: [String: String]) {
         self.title = title
         self.date = Date()
         self.emotions = emotions
         self.prompts = prompts
         self.createdAt = Date()
+    }
+
+    // Summary is available after 3 months (90 days)
+    var canAddSummary: Bool {
+        let calendar = Calendar.current
+        guard let summaryAvailableDate = calendar.date(byAdding: .day, value: 90, to: self.date) else {
+            return false
+        }
+        return Date() >= summaryAvailableDate
+    }
+
+    var hasSummary: Bool {
+        guard let summary = summary else { return false }
+        return !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     
     // Helper methods for check-in logic

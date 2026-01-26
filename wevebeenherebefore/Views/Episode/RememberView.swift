@@ -9,39 +9,21 @@ struct RememberView: View {
     let onComplete: () -> Void
 
     @State private var opacity: Double = 0
+    @State private var currentIndex: Int = 0
+    @State private var shuffledEpisodes: [Episode] = []
 
-    // All past episodes (excluding current)
-    private var pastEpisodes: [Episode] {
-        allEpisodes.filter { $0.persistentModelID != currentEpisode.persistentModelID }
-    }
-
-    // Group episodes by month and year (same as EpisodesListView)
-    private var groupedEpisodes: [(key: String, episodes: [Episode])] {
-        let calendar = Calendar.current
-        let grouped = Dictionary(grouping: pastEpisodes) { episode -> String in
-            let components = calendar.dateComponents([.year, .month], from: episode.date)
-            let date = calendar.date(from: components) ?? episode.date
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM yyyy"
-            return formatter.string(from: date)
+    // Episodes with summaries (excluding current)
+    private var summarizedEpisodes: [Episode] {
+        allEpisodes.filter { episode in
+            episode.persistentModelID != currentEpisode.persistentModelID && episode.hasSummary
         }
-
-        // Sort by the most recent date in each group
-        return grouped.map { (key: $0.key, episodes: $0.value) }
-            .sorted { first, second in
-                guard let firstDate = first.episodes.first?.date,
-                      let secondDate = second.episodes.first?.date else {
-                    return false
-                }
-                return firstDate > secondDate
-            }
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                if pastEpisodes.isEmpty {
-                    // Empty state
+                if summarizedEpisodes.isEmpty {
+                    // Empty state - shouldn't normally be shown since coordinator skips this
                     VStack(spacing: 16) {
                         Image(systemName: "heart.circle")
                             .font(.system(size: 60))
@@ -51,14 +33,14 @@ struct RememberView: View {
                             .font(.title2)
                             .fontWeight(.semibold)
 
-                        Text("Complete more episodes to see your growth over time.")
+                        Text("As you reflect on past episodes, their summaries will appear here.")
                             .font(.body)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 40)
                     }
                 } else {
-                    List {
+                    VStack(spacing: 0) {
                         // Header
                         VStack(alignment: .leading, spacing: 8) {
                             Text("We've Been Here Before, Remember?")
@@ -71,43 +53,25 @@ struct RememberView: View {
                                 .foregroundColor(.secondary)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        .padding(.horizontal)
+                        .padding(.top, 16)
+                        .padding(.bottom, 8)
 
-                        // Episodes grouped by month
-                        ForEach(groupedEpisodes, id: \.key) { group in
-                            Section(header: Text(group.key).font(.headline).textCase(nil)) {
-                                ForEach(group.episodes) { episode in
-                                    NavigationLink(value: episode) {
-                                        HStack {
-                                            VStack(alignment: .leading, spacing: 4) {
-                                                Text(episode.title)
-                                                    .font(.headline)
-
-                                                Text(episode.date, format: .dateTime.month().day())
-                                                    .font(.subheadline)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                            .padding(.vertical, 4)
-
-                                            Spacer()
-                                        }
-                                    }
-                                }
+                        // Carousel
+                        TabView(selection: $currentIndex) {
+                            ForEach(Array(shuffledEpisodes.enumerated()), id: \.element.id) { index, episode in
+                                EpisodeSummaryCard(episode: episode)
+                                    .tag(index)
                             }
                         }
-                    }
-                    .navigationDestination(for: Episode.self) { episode in
-                        EpisodeSummaryView(episode: episode)
-                    }
-                    .safeAreaInset(edge: .bottom) {
-                        // Spacer for Continue button
+                        .tabViewStyle(.page(indexDisplayMode: .automatic))
+
+                        // Spacer for continue button
                         Color.clear.frame(height: 80)
                     }
                 }
 
-                // Continue button - iOS 26 liquid glass style
+                // Continue button
                 VStack {
                     Spacer()
                     HStack {
@@ -157,7 +121,9 @@ struct RememberView: View {
             }
             .opacity(opacity)
             .onAppear {
-                // Gentle fade in
+                if shuffledEpisodes.isEmpty {
+                    shuffledEpisodes = summarizedEpisodes.shuffled()
+                }
                 withAnimation(.easeIn(duration: 0.5)) {
                     opacity = 1.0
                 }
@@ -166,39 +132,68 @@ struct RememberView: View {
     }
 }
 
+// Card view for episode summaries in carousel
+struct EpisodeSummaryCard: View {
+    let episode: Episode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(episode.title)
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Text(episode.date, format: .dateTime.month().day().year())
+                .font(.subheadline)
+                .opacity(0.7)
+
+            if let summary = episode.summary {
+                Text(summary)
+                    .font(.body)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.top, 4)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+}
+
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
     let container = try! ModelContainer(for: Episode.self, Card.self, CheckIn.self, configurations: config)
 
-    // Create sample episode
+    // Create current episode
     let episode = Episode(
         title: "Test Episode",
         emotions: ["Anxiety": 4],
         prompts: ["What happened?": "Test"]
     )
 
-    // Create past episode with check-in
+    // Create past episode with summary
     let pastEpisode = Episode(
         title: "Work Stress",
         emotions: ["Stress": 8],
         prompts: ["What happened?": "Big presentation"]
     )
-    pastEpisode.date = Calendar.current.date(byAdding: .month, value: -3, to: Date()) ?? Date()
+    pastEpisode.date = Calendar.current.date(byAdding: .month, value: -4, to: Date()) ?? Date()
+    pastEpisode.summary = "Looking back, that presentation went better than I thought. I survived it and learned a lot about handling pressure. The anxiety I felt beforehand was much worse than the actual experience."
+    pastEpisode.summaryCreatedAt = Date()
 
-    let checkIn = CheckIn(
-        text: "Looking back, that presentation went better than I thought. I survived it and learned a lot about handling pressure.",
-        checkInType: .threeMonth,
-        episode: pastEpisode
+    // Create another past episode with summary
+    let pastEpisode2 = Episode(
+        title: "Family Conflict",
+        emotions: ["Sadness": 6],
+        prompts: ["What happened?": "Argument with sibling"]
     )
-
-    // Create sample cards
-    let card1 = Card(text: "Deep breathing helps me calm down", type: .technique, color: .blue)
-    let card2 = Card(text: "Watching the sunset from my window", type: .delight, color: .orange)
+    pastEpisode2.date = Calendar.current.date(byAdding: .month, value: -6, to: Date()) ?? Date()
+    pastEpisode2.summary = "We eventually talked it out and our relationship is stronger now. These conflicts, while painful, can lead to better understanding."
+    pastEpisode2.summaryCreatedAt = Date()
 
     container.mainContext.insert(pastEpisode)
-    container.mainContext.insert(checkIn)
-    container.mainContext.insert(card1)
-    container.mainContext.insert(card2)
+    container.mainContext.insert(pastEpisode2)
 
     return RememberView(currentEpisode: episode) {
         print("Completed")

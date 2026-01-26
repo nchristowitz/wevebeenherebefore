@@ -141,6 +141,7 @@ struct ResilienceView: View {
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
+                                .tint(.red)
                                 .accessibilityLabel("Delete card")
                                 .accessibilityHint("Permanently remove this \(card.type.rawValue) card")
 

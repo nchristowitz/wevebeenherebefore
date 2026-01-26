@@ -108,6 +108,14 @@ struct EpisodeFlowCoordinator: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var state = EpisodeFlowState()
     @State private var savedEpisode: Episode?
+    @Query private var allEpisodes: [Episode]
+
+    // Check if there are any episodes with summaries (excluding current)
+    private var hasSummarizedEpisodes: Bool {
+        allEpisodes.contains { episode in
+            episode.persistentModelID != savedEpisode?.persistentModelID && episode.hasSummary
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -152,7 +160,12 @@ struct EpisodeFlowCoordinator: View {
                         onSave: {
                             let episode = saveEpisode()
                             savedEpisode = episode
-                            state.moveToNext()
+                            // Skip remember step if no summarized episodes exist
+                            if hasSummarizedEpisodes {
+                                state.moveToNext()
+                            } else {
+                                state.currentStep = .resilienceReminders
+                            }
                         }
                     )
 

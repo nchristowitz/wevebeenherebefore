@@ -6,7 +6,9 @@ enum SheetState: Identifiable {
     case editNote(EpisodeNote)
     case editCheckIn(CheckIn)
     case addCheckIn(CheckInType)
-    
+    case addSummary(Episode)
+    case createMemoryFromSummary(String)
+
     var id: String {
         switch self {
         case .addNote:
@@ -17,6 +19,10 @@ enum SheetState: Identifiable {
             return "editCheckIn_\(checkIn.createdAt.timeIntervalSince1970)"
         case .addCheckIn(let type):
             return "addCheckIn_\(type.rawValue)"
+        case .addSummary:
+            return "addSummary"
+        case .createMemoryFromSummary:
+            return "createMemoryFromSummary"
         }
     }
 }
@@ -107,12 +113,77 @@ struct EpisodeSummaryView: View {
                     Text(dateFormatter.string(from: episode?.date ?? Date()))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     Text(title)
                         .font(.title)
                         .fontWeight(.bold)
                 }
-                
+
+                // Episode Summary section (only for existing episodes, available after 3 months)
+                if let episode = episode {
+                    if episode.canAddSummary || episode.hasSummary {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text("Episode Summary")
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+
+                                Spacer()
+
+                                if episode.hasSummary {
+                                    Button("Edit") {
+                                        sheetState = .addSummary(episode)
+                                    }
+                                    .font(.subheadline)
+                                    .foregroundColor(.blue)
+                                }
+                            }
+
+                            if episode.hasSummary, let summary = episode.summary {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    if let createdAt = episode.summaryCreatedAt {
+                                        Text(createdAt, format: .dateTime.month().day().year())
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+
+                                    Text(summary)
+                                        .font(.body)
+
+                                    Button(action: {
+                                        sheetState = .createMemoryFromSummary(summary)
+                                    }) {
+                                        HStack {
+                                            Image(systemName: "heart.fill")
+                                            Text("Create Memory")
+                                        }
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.blue)
+                                    }
+                                    .padding(.top, 4)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                            } else {
+                                Button(action: {
+                                    sheetState = .addSummary(episode)
+                                }) {
+                                    Text("Add Summary")
+                                        .font(.body)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 12)
+                                        .background(Color.blue)
+                                        .cornerRadius(8)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Notes section (only show if we have an episode)
                 if let episode = episode {
                     VStack(alignment: .leading, spacing: 12) {
@@ -294,12 +365,12 @@ struct EpisodeSummaryView: View {
                                 Text(promptKey)
                                     .font(.title3)
                                     .fontWeight(.semibold)
-                                
+
                                 Text(response)
                                     .font(.body)
                                     .foregroundColor(.secondary)
                             }
-                            
+
                             // Add divider after each remaining prompt except the last one
                             if index < remainingPrompts.count - 1 {
                                 Divider()
@@ -342,6 +413,10 @@ struct EpisodeSummaryView: View {
                 }
             case .editCheckIn(let checkIn):
                 CheckInView(episode: episode!, checkInType: checkIn.checkInType, existingCheckIn: checkIn)
+            case .addSummary(let episode):
+                AddSummaryView(episode: episode)
+            case .createMemoryFromSummary(let summaryText):
+                AddMemoryView(initialText: summaryText)
             }
         }
     }
