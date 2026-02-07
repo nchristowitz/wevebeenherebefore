@@ -45,8 +45,8 @@ The app is built around the insight that emotional episodes feel overwhelming in
 
 Three-tab interface (`MainTabView`):
 1. **Episodes**: List of past episodes, create new episodes
-2. **Resilience**: Card toolkit + pending check-ins
-3. **Settings**: Export/import, debug tools
+2. **Resilience**: Card toolkit + pending check-ins, filter menu with shuffle toggle
+3. **Settings**: Notification time, export/import, debug tools
 
 ### Key Flows
 
@@ -117,7 +117,7 @@ wevebeenherebefore/
 │   ├── AddTechniqueView    # Technique card creation
 │   ├── ResilienceView      # Main toolkit view with cards and pending check-ins
 │   ├── EpisodesListView    # List of all episodes
-│   └── SettingsView        # App settings
+│   └── SettingsView        # App settings (notification time, export/import, debug)
 ├── Components/             # Reusable UI (CardTextEditor, CheckInCard, etc.)
 ├── Utils/                  # NotificationManager, NotificationCoordinator, ColorUtils
 └── Extensions/             # Swift extensions
@@ -142,9 +142,24 @@ wevebeenherebefore/
 ### Notification System
 
 1. Episode creation triggers `scheduleNotifications()`
-2. Notifications scheduled at 9 AM on appropriate days
+2. Notifications scheduled at user-configured time (default 9 AM), stored in `@AppStorage("notificationHour")` and `@AppStorage("notificationMinute")`
 3. Notification taps handled: AppDelegate → NotificationCoordinator → View navigation
 4. Badge count reflects active uncompleted check-in windows
+
+**Important**: When cancelling notifications (e.g., on episode deletion), always use the stored `notificationIDs` array on the Episode model rather than regenerating IDs from `persistentModelID`. The string representation of `persistentModelID` can differ between scheduling and cancellation, causing silent cancellation failures.
+
+### User Settings (@AppStorage)
+
+Settings are stored via `@AppStorage` for persistence:
+- `notificationHour` / `notificationMinute`: When check-in reminders are sent
+- `shuffleCardsEnabled`: Whether resilience cards appear in random order
+
+### ResilienceView Card Ordering
+
+- Default: newest to oldest (via `@Query` sort)
+- Shuffle mode: When enabled via filter menu, cards are shuffled on each view appearance
+- Shuffle order stored in `shuffledCardIDs` state, persists for session but refreshes on next app launch
+- Type filters (memory/delight/technique) apply on top of the current ordering
 
 ### Color Management
 
