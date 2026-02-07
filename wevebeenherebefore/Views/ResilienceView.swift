@@ -9,6 +9,8 @@ struct ResilienceView: View {
 
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
+    @State private var shuffledCardIDs: [PersistentIdentifier] = []
+    @AppStorage("shuffleCardsEnabled") private var shuffleEnabled = false
 
     // Consolidated sheet state
     @State private var activeSheet: ActiveSheet?
@@ -50,21 +52,36 @@ struct ResilienceView: View {
     }
     
     var filteredCards: [Card] {
-        guard let filter = selectedFilter else { return cards }
-        
+        // Start with base cards, applying shuffle if enabled
+        var result: [Card]
+        if shuffleEnabled && !shuffledCardIDs.isEmpty {
+            // Sort by shuffled order
+            let idToIndex = Dictionary(uniqueKeysWithValues: shuffledCardIDs.enumerated().map { ($1, $0) })
+            result = cards.sorted { card1, card2 in
+                let index1 = idToIndex[card1.persistentModelID] ?? Int.max
+                let index2 = idToIndex[card2.persistentModelID] ?? Int.max
+                return index1 < index2
+            }
+        } else {
+            result = Array(cards)
+        }
+
+        // Apply filter if selected
+        guard let filter = selectedFilter else { return result }
+
         switch filter {
         case .memory:
-            return cards.filter { $0.type == .memory }
+            return result.filter { $0.type == .memory }
         case .delight:
-            return cards.filter { $0.type == .delight }
+            return result.filter { $0.type == .delight }
         case .technique:
-            return cards.filter { $0.type == .technique }
+            return result.filter { $0.type == .technique }
         case .imagesOnly:
-            return cards.filter { $0.imageData != nil }
+            return result.filter { $0.imageData != nil }
         case .dateNewest:
-            return cards.sorted { $0.createdAt > $1.createdAt }
+            return result.sorted { $0.createdAt > $1.createdAt }
         case .dateOldest:
-            return cards.sorted { $0.createdAt < $1.createdAt }
+            return result.sorted { $0.createdAt < $1.createdAt }
         }
     }
     
@@ -266,6 +283,21 @@ struct ResilienceView: View {
                             }
                         }
 
+                        Divider()
+
+                        Button(action: {
+                            shuffleEnabled.toggle()
+                            if shuffleEnabled {
+                                shuffleCards()
+                            }
+                        }) {
+                            if shuffleEnabled {
+                                Label("Shuffle", systemImage: "checkmark")
+                            } else {
+                                Label("Shuffle", systemImage: "shuffle")
+                            }
+                        }
+
                         if selectedFilter != nil {
                             Divider()
 
@@ -316,6 +348,11 @@ struct ResilienceView: View {
             // Update badge count synchronously
             updateBadgeCount()
 
+            // Shuffle cards if enabled
+            if shuffleEnabled {
+                shuffleCards()
+            }
+
             // Check permissions in background
             Task.detached {
                 await NotificationManager.shared.checkPermission()
@@ -327,6 +364,10 @@ struct ResilienceView: View {
         }
     }
     
+    private func shuffleCards() {
+        shuffledCardIDs = cards.map { $0.persistentModelID }.shuffled()
+    }
+
     private func updateBadgeCount() {
         // Count pending check-ins across all episodes
         let descriptor = FetchDescriptor<Episode>()
