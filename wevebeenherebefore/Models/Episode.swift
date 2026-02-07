@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @Model
 final class Episode {
@@ -104,7 +105,13 @@ final class Episode {
     }
     
     func cancelAllNotifications() {
-        NotificationManager.shared.cancelAllNotifications(for: self)
+        // Use the stored notification IDs that were returned when scheduling
+        // rather than regenerating them, since persistentModelID string representation
+        // can differ between scheduling and cancellation
+        if !notificationIDs.isEmpty {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs)
+            print("🗑️ Cancelled \(notificationIDs.count) notifications using stored IDs")
+        }
         self.notificationIDs = []
     }
     

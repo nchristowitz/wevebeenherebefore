@@ -5,9 +5,37 @@ struct SettingsView: View {
     @State private var isShowingImport = false
     @State private var isShowingDebug = false
 
+    @AppStorage("notificationHour") private var notificationHour = 9
+    @AppStorage("notificationMinute") private var notificationMinute = 0
+
+    private var notificationTime: Binding<Date> {
+        Binding(
+            get: {
+                Calendar.current.date(from: DateComponents(hour: notificationHour, minute: notificationMinute)) ?? Date()
+            },
+            set: { newDate in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
+                notificationHour = components.hour ?? 9
+                notificationMinute = components.minute ?? 0
+            }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    DatePicker(
+                        "Reminder Time",
+                        selection: notificationTime,
+                        displayedComponents: .hourAndMinute
+                    )
+                } header: {
+                    Text("Notifications")
+                } footer: {
+                    Text("Check-in reminders will be sent at this time.")
+                }
+
                 Section {
                     Button(action: {
                         isShowingExport = true

@@ -126,7 +126,8 @@ class NotificationManager: ObservableObject {
     
     private func calculateNotificationDate(for episode: Episode, checkInType: CheckInType) -> Date? {
         let calendar = Calendar.current
-        let notificationHour = 9 // 9 AM
+        let notificationHour = UserDefaults.standard.object(forKey: "notificationHour") as? Int ?? 9
+        let notificationMinute = UserDefaults.standard.object(forKey: "notificationMinute") as? Int ?? 0
         let now = Date()
         
         switch checkInType {
@@ -136,12 +137,12 @@ class NotificationManager: ObservableObject {
                 print("❌ Could not calculate next day for 24h check-in")
                 return nil
             }
-            let notificationDate = calendar.date(bySettingHour: notificationHour, minute: 0, second: 0, of: nextDay)
+            let notificationDate = calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: nextDay)
             
             // If the calculated date is in the past, schedule for tomorrow at 9 AM instead
             if let date = notificationDate, date <= now {
                 print("⚠️ 24h notification would be in past, scheduling for next available time")
-                return calendar.date(byAdding: .day, value: 1, to: now)?.setting(hour: notificationHour, minute: 0)
+                return calendar.date(byAdding: .day, value: 1, to: now)?.setting(hour: notificationHour, minute: notificationMinute)
             }
             
             return notificationDate
@@ -152,15 +153,15 @@ class NotificationManager: ObservableObject {
                 print("❌ Could not calculate 2-week date")
                 return nil
             }
-            return calendar.date(bySettingHour: notificationHour, minute: 0, second: 0, of: targetDate)
-            
+            return calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: targetDate)
+
         case .threeMonth:
             // 3 months after episode at 9 AM
             guard let targetDate = calendar.date(byAdding: .day, value: 90, to: episode.date) else {
                 print("❌ Could not calculate 3-month date")
                 return nil
             }
-            return calendar.date(bySettingHour: notificationHour, minute: 0, second: 0, of: targetDate)
+            return calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: targetDate)
         }
     }
     
