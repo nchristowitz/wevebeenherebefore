@@ -95,17 +95,7 @@ struct MainTabView: View {
 
     // Calculate pending check-ins count for badge
     private var pendingCheckInsCount: Int {
-        var count = 0
-        for episode in episodes {
-            for checkInType in CheckInType.allCases {
-                if episode.isCheckInWindowActive(for: checkInType) &&
-                   !episode.hasCheckIn(for: checkInType) &&
-                   !episode.isCheckInDismissed(for: checkInType) {
-                    count += 1
-                }
-            }
-        }
-        return count
+        episodes.reduce(0) { $0 + $1.pendingCheckInTypes.count }
     }
 
     var body: some View {

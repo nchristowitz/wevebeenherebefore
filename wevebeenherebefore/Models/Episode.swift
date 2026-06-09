@@ -43,30 +43,34 @@ final class Episode {
     }
     
     // Helper methods for check-in logic
-    func isCheckInWindowActive(for type: CheckInType) -> Bool {
-        let now = Date()
+
+    // The date range during which a check-in of the given type can be added.
+    // 24h: the calendar day after the episode. 2w: the target day. 3m: 5 days from the target day.
+    func checkInWindow(for type: CheckInType) -> DateInterval? {
         let calendar = Calendar.current
-        
+
         switch type {
         case .twentyFourHour:
-            // Available starting the day after the episode (regardless of time)
-            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: self.date),
-                  let startOfNextDay = calendar.dateInterval(of: .day, for: nextDay)?.start,
-                  let endOfNextDay = calendar.dateInterval(of: .day, for: nextDay)?.end else { return false }
-            return now >= startOfNextDay && now < endOfNextDay
-            
+            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: self.date) else { return nil }
+            return calendar.dateInterval(of: .day, for: nextDay)
+
         case .twoWeek:
-            let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) ?? self.date
+            guard let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) else { return nil }
             let windowStart = calendar.startOfDay(for: targetDate)
-            let windowEnd = calendar.date(byAdding: .hour, value: 24, to: windowStart) ?? windowStart
-            return now >= windowStart && now <= windowEnd
-            
+            guard let windowEnd = calendar.date(byAdding: .hour, value: 24, to: windowStart) else { return nil }
+            return DateInterval(start: windowStart, end: windowEnd)
+
         case .threeMonth:
-            let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) ?? self.date
+            guard let targetDate = calendar.date(byAdding: .day, value: type.daysFromEpisode, to: self.date) else { return nil }
             let windowStart = calendar.startOfDay(for: targetDate)
-            let windowEnd = calendar.date(byAdding: .day, value: 5, to: windowStart) ?? windowStart
-            return now >= windowStart && now <= windowEnd
+            guard let windowEnd = calendar.date(byAdding: .day, value: 5, to: windowStart) else { return nil }
+            return DateInterval(start: windowStart, end: windowEnd)
         }
+    }
+
+    func isCheckInWindowActive(for type: CheckInType) -> Bool {
+        guard let window = checkInWindow(for: type) else { return false }
+        return window.contains(Date())
     }
     
     func hasCheckIn(for type: CheckInType) -> Bool {
@@ -87,21 +91,31 @@ final class Episode {
         return dismissedCheckIns.contains(type.rawValue)
     }
     
-    // Returns true if any check-in window is currently active and the check-in
-       // hasn't been completed yet.
-       var hasPendingCheckIn: Bool {
-           for type in CheckInType.allCases {
-               if isCheckInWindowActive(for: type) && !hasCheckIn(for: type) {
-                   return true
-               }
-           }
-           return false
-       }
+    // Check-in types whose window is currently active and that haven't been
+    // completed or dismissed. Single source of truth for badges, dots, and
+    // the pending check-in cards.
+    var pendingCheckInTypes: [CheckInType] {
+        CheckInType.allCases.filter { type in
+            isCheckInWindowActive(for: type) && !hasCheckIn(for: type) && !isCheckInDismissed(for: type)
+        }
+    }
+
+    var hasPendingCheckIn: Bool {
+        !pendingCheckInTypes.isEmpty
+    }
     
     // Notification management methods
     func scheduleNotifications() {
         let ids = NotificationManager.shared.scheduleCheckInNotifications(for: self)
         self.notificationIDs = ids
+    }
+
+    // Re-schedule the notification for a single check-in type (e.g. after its
+    // check-in was deleted), leaving other pending notifications untouched.
+    func rescheduleNotification(for checkInType: CheckInType) {
+        if let id = NotificationManager.shared.scheduleCheckInNotification(for: self, checkInType: checkInType) {
+            notificationIDs.append(id)
+        }
     }
     
     func cancelAllNotifications() {

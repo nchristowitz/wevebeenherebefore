@@ -8,23 +8,23 @@ struct AddCardBaseView<Content: View>: View {
     let type: CardType
     @State private var text: String = ""
     @Binding var selectedColor: Color
-    @State private var selectedDate = Date()
+    let date: Date?
     let imageData: Data?
+    let onRemoveImage: (() -> Void)?
     let content: () -> Content
     let existingCard: Card?
 
-    init(type: CardType, selectedColor: Binding<Color>, imageData: Data? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+    init(type: CardType, selectedColor: Binding<Color>, date: Date? = nil, imageData: Data? = nil, onRemoveImage: (() -> Void)? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.type = type
         self._selectedColor = selectedColor
+        self.date = date
         self.imageData = imageData
+        self.onRemoveImage = onRemoveImage
         self.existingCard = existingCard
         self.content = content
 
         if let card = existingCard {
             _text = State(initialValue: card.text)
-            if let date = card.date {
-                _selectedDate = State(initialValue: date)
-            }
         } else if let initialText = initialText {
             _text = State(initialValue: initialText)
         }
@@ -46,14 +46,15 @@ struct AddCardBaseView<Content: View>: View {
                                 .frame(maxHeight: 200)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                            Button(action: {
-                                // Handle image removal through parent view
-                            }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundStyle(.white, Color.black.opacity(0.5))
-                                    .background(Circle().fill(.white))
-                                    .offset(x: 8, y: -8)
+                            if let onRemoveImage = onRemoveImage {
+                                Button(action: onRemoveImage) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 24))
+                                        .foregroundStyle(.white, Color.black.opacity(0.5))
+                                        .background(Circle().fill(.white))
+                                        .offset(x: 8, y: -8)
+                                }
+                                .accessibilityLabel("Remove photo")
                             }
                         }
                         .padding(.horizontal)
@@ -109,7 +110,7 @@ struct AddCardBaseView<Content: View>: View {
                 existingCard.text = text
                 existingCard.color = selectedColor
                 if type == .memory {
-                    existingCard.date = selectedDate
+                    existingCard.date = date
                 }
                 if type == .delight {
                     existingCard.imageData = imageData
@@ -119,7 +120,7 @@ struct AddCardBaseView<Content: View>: View {
                     text: text,
                     type: type,
                     color: selectedColor,
-                    date: type == .memory ? selectedDate : nil,
+                    date: type == .memory ? date : nil,
                     imageData: type == .delight ? imageData : nil
                 )
                 modelContext.insert(card)

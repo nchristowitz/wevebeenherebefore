@@ -7,14 +7,7 @@ class EpisodeFlowState: ObservableObject {
     @Published var responses: [String: String] = [:] // Changed from [Int: String]
     @Published var episodeTitle: String = ""
     @Published var isShowingExitAlert = false
-    
-    let promptQuestions = [
-        "Describe the episode": "Think about future you as you write this, keep it short but detailed enough",
-        "How do you think you'll feel two weeks from now?": "Future reflections help slow you down and see the bigger picture",
-        "What about 3 months from now?": "Will this episode still hurt? Will it be a small speed bump?",
-        "Let's give this episode a title": "Keep it short but recognizable for future you"
-    ]
-    
+
     enum EpisodeStep: Equatable {
         case emotionRating
         case prompt(EpisodePrompt)
@@ -40,12 +33,6 @@ class EpisodeFlowState: ObservableObject {
         }
     }
     
-    var isLastPrompt: Bool {
-        guard case .prompt(let current) = currentStep else { return false }
-        let prompts = Array(promptQuestions.keys)
-        return prompts.lastIndex(of: current.question) == prompts.count - 1
-    }
-    
     func moveToNext() {
         switch currentStep {
         case .emotionRating:
@@ -64,28 +51,6 @@ class EpisodeFlowState: ObservableObject {
             currentStep = .resilienceReminders
         case .resilienceReminders:
             break
-        }
-    }
-    
-    func moveToPrevious() {
-        switch currentStep {
-        case .emotionRating:
-            break
-        case .prompt(let current):
-            let prompts = Array(promptQuestions.keys)
-            if let currentIndex = prompts.firstIndex(of: current.question) {
-                if currentIndex == 0 {
-                    currentStep = .emotionRating
-                } else {
-                    currentStep = .prompt(EpisodePrompt.prompts[currentIndex - 1])
-                }
-            }
-        case .summary:
-            currentStep = .prompt(EpisodePrompt.prompts.last!)
-        case .remember:
-            currentStep = .summary
-        case .resilienceReminders:
-            currentStep = .remember
         }
     }
     

@@ -18,6 +18,10 @@ struct AddDelightView: View {
             type: .delight,
             selectedColor: $selectedColor,
             imageData: selectedImageData,
+            onRemoveImage: {
+                selectedImageData = nil
+                selectedItem = nil
+            },
             existingCard: existingCard
         ) {
             HStack {

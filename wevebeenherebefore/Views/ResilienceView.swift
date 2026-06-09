@@ -1,6 +1,15 @@
 import SwiftUI
 import SwiftData
 
+enum FilterType {
+    case memory
+    case delight
+    case technique
+    case imagesOnly
+    case dateNewest
+    case dateOldest
+}
+
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
@@ -29,26 +38,6 @@ struct ResilienceView: View {
             case .checkIn: return "checkIn"
             }
         }
-    }
-    
-    // Check if there are pending check-ins
-    private var hasPendingCheckIns: Bool {
-        let descriptor = FetchDescriptor<Episode>()
-        
-        do {
-            let episodes = try modelContext.fetch(descriptor)
-            for episode in episodes {
-                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
-                for checkInType in CheckInType.allCases {
-                    if !completedCheckInTypes.contains(checkInType) && episode.isCheckInWindowActive(for: checkInType) {
-                        return true
-                    }
-                }
-            }
-        } catch {
-            print("Error checking for pending check-ins: \(error)")
-        }
-        return false
     }
     
     var filteredCards: [Card] {
@@ -95,21 +84,10 @@ struct ResilienceView: View {
     }
     
     var pendingCheckIns: [PendingCheckIn] {
-        var pending: [PendingCheckIn] = []
-        
-        for episode in episodes {
-            for checkInType in CheckInType.allCases {
-                if episode.isCheckInWindowActive(for: checkInType) && 
-                   !episode.hasCheckIn(for: checkInType) && 
-                   !episode.isCheckInDismissed(for: checkInType) {
-                    pending.append(PendingCheckIn(episode: episode, checkInType: checkInType))
-                }
-            }
+        episodes.flatMap { episode in
+            episode.pendingCheckInTypes.map { PendingCheckIn(episode: episode, checkInType: $0) }
         }
-        
-        return pending.sorted { first, second in
-            first.checkInType.daysFromEpisode < second.checkInType.daysFromEpisode
-        }
+        .sorted { $0.checkInType.daysFromEpisode < $1.checkInType.daysFromEpisode }
     }
     
     
@@ -369,35 +347,7 @@ struct ResilienceView: View {
     }
 
     private func updateBadgeCount() {
-        // Count pending check-ins across all episodes
-        let descriptor = FetchDescriptor<Episode>()
-
-        do {
-            let episodes = try modelContext.fetch(descriptor)
-            var pendingCount = 0
-
-            for episode in episodes {
-                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
-                for checkInType in CheckInType.allCases {
-                    if !completedCheckInTypes.contains(checkInType) &&
-                       !episode.isCheckInDismissed(for: checkInType) &&
-                       episode.isCheckInWindowActive(for: checkInType) {
-                        pendingCount += 1
-                    }
-                }
-            }
-
-            DispatchQueue.main.async {
-                // Clear delivered notifications from notification center
-                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-                // Update badge to reflect actual pending count
-                UNUserNotificationCenter.current().setBadgeCount(pendingCount)
-                print("📱 Updated badge count to: \(pendingCount)")
-            }
-        } catch {
-            print("❌ Error updating badge count: \(error)")
-            UNUserNotificationCenter.current().setBadgeCount(0)
-        }
+        NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
     }
 }
 
@@ -481,39 +431,6 @@ struct CardView: View {
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Double tap to view actions. Swipe actions available.")
         .accessibilityAddTraits(.isButton)
-    }
-}
-
-struct FilterMenuView: View {
-    @Binding var selectedFilter: FilterType?
-    @Binding var isPresented: Bool
-    
-    var body: some View {
-        NavigationStack {
-            FilterMenu(selectedFilter: $selectedFilter, isPresented: $isPresented)
-                .navigationTitle("Filter by")
-                .navigationBarTitleDisplayMode(.inline)
-        }
-    }
-}
-
-struct AddCardMenuView: View {
-    @Binding var isShowingDelight: Bool
-    @Binding var isShowingMemory: Bool
-    @Binding var isShowingTechnique: Bool
-    @Binding var isPresented: Bool
-    
-    var body: some View {
-        NavigationStack {
-            AddCardMenu(
-                isShowingDelight: $isShowingDelight,
-                isShowingMemory: $isShowingMemory,
-                isShowingTechnique: $isShowingTechnique,
-                isPresented: $isPresented
-            )
-            .navigationTitle("Add a resilience card")
-            .navigationBarTitleDisplayMode(.inline)
-        }
     }
 }
 

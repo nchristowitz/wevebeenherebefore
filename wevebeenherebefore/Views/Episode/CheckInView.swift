@@ -146,20 +146,17 @@ struct CheckInView: View {
             } else {
                 let checkIn = CheckIn(text: trimmedText, checkInType: checkInType, episode: episode)
                 modelContext.insert(checkIn)
-                
+
                 // Cancel the notification for this check-in type
                 episode.cancelNotificationForCheckIn(checkInType)
-                
-                // Update badge count
-                Task {
-                    await MainActor.run {
-                        UNUserNotificationCenter.current().setBadgeCount(0)
-                    }
-                }
             }
-            
+
             // Save the context to persist changes
             try modelContext.save()
+
+            // Recalculate the badge from actual pending check-ins rather than
+            // zeroing it, in case other episodes still have one pending
+            NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
             
             onCompletion?()
             dismiss()
