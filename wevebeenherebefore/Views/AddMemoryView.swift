@@ -10,12 +10,14 @@ struct AddMemoryView: View {
         self.existingCard = existingCard
         self.initialText = initialText
         _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
+        _selectedDate = State(initialValue: existingCard?.date ?? Date())
     }
 
     var body: some View {
         AddCardBaseView(
             type: .memory,
             selectedColor: $selectedColor,
+            date: selectedDate,
             existingCard: existingCard,
             initialText: initialText
         ) {

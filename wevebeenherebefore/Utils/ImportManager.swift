@@ -14,11 +14,15 @@ class ImportManager {
     private init() {}
     
     func importData(from url: URL, into modelContext: ModelContext) async throws -> ImportResult {
-        guard url.startAccessingSecurityScopedResource() else {
-            throw ImportError.fileAccessDenied
+        // startAccessingSecurityScopedResource returns false for URLs that
+        // aren't security-scoped (e.g. files already inside our sandbox) —
+        // that's not an error, so proceed and let the read fail if blocked.
+        let didStartAccessing = url.startAccessingSecurityScopedResource()
+        defer {
+            if didStartAccessing {
+                url.stopAccessingSecurityScopedResource()
+            }
         }
-        
-        defer { url.stopAccessingSecurityScopedResource() }
         
         let data = try Data(contentsOf: url)
         let fileExtension = url.pathExtension.lowercased()
@@ -64,7 +68,20 @@ class ImportManager {
                    let created = ISO8601DateFormatter().date(from: createdString) {
                     episode.createdAt = created
                 }
-                
+
+                if let summary = episodeDict["summary"] as? String {
+                    episode.summary = summary
+                }
+
+                if let summaryCreatedString = episodeDict["summaryCreatedAt"] as? String,
+                   let summaryCreated = ISO8601DateFormatter().date(from: summaryCreatedString) {
+                    episode.summaryCreatedAt = summaryCreated
+                }
+
+                if let dismissed = episodeDict["dismissedCheckIns"] as? [String] {
+                    episode.dismissedCheckIns = dismissed
+                }
+
                 modelContext.insert(episode)
                 importedEpisodes += 1
                 
@@ -128,7 +145,13 @@ class ImportManager {
                     date = ISO8601DateFormatter().date(from: dateString)
                 }
                 
-                let card = Card(text: text, type: cardType, color: color, date: date, imageData: nil)
+                // Restore the photo if the export included one
+                var imageData: Data?
+                if let base64 = cardDict["imageData"] as? String {
+                    imageData = Data(base64Encoded: base64)
+                }
+
+                let card = Card(text: text, type: cardType, color: color, date: date, imageData: imageData)
                 
                 if let createdString = cardDict["createdAt"] as? String,
                    let created = ISO8601DateFormatter().date(from: createdString) {

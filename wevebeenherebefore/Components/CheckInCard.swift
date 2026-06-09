@@ -8,13 +8,12 @@ struct CheckInCard: View {
     let onDismiss: () -> Void
     
     private var timeRemainingText: String {
-        let calendar = Calendar.current
-        let now = Date()
-        let targetDate = calendar.date(byAdding: .day, value: checkInType.daysFromEpisode, to: episode.date) ?? episode.date
-        let windowEnd = calendar.date(byAdding: .day, value: checkInType == .threeMonth ? 5 : 1, to: targetDate) ?? targetDate
-        
-        let components = calendar.dateComponents([.day, .hour], from: now, to: windowEnd)
-        
+        guard let windowEnd = episode.checkInWindow(for: checkInType)?.end else {
+            return "Available now"
+        }
+
+        let components = Calendar.current.dateComponents([.day, .hour], from: Date(), to: windowEnd)
+
         if let days = components.day, days > 0 {
             return "\(days) day\(days == 1 ? "" : "s") remaining"
         } else if let hours = components.hour, hours > 0 {

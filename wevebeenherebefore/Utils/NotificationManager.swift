@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import UserNotifications
 
 class NotificationManager: ObservableObject {
@@ -60,7 +61,28 @@ class NotificationManager: ObservableObject {
         print("📊 Total notifications scheduled: \(notificationIDs.count)/\(CheckInType.allCases.count)")
         return notificationIDs
     }
-    
+
+    // Schedule the notification for a single check-in type. Returns the
+    // notification ID, or nil if permission is missing or the date has passed.
+    func scheduleCheckInNotification(for episode: Episode, checkInType: CheckInType) -> String? {
+        guard hasPermission else {
+            print("❌ Cannot schedule notification: Permission not granted")
+            return nil
+        }
+        return scheduleNotification(for: episode, checkInType: checkInType)
+    }
+
+    // Recalculate the app badge from actual pending check-ins and clear
+    // delivered notifications. Call whenever pending state may have changed.
+    func refreshBadgeCount(modelContext: ModelContext) {
+        let episodes = (try? modelContext.fetch(FetchDescriptor<Episode>())) ?? []
+        let pendingCount = episodes.reduce(0) { $0 + $1.pendingCheckInTypes.count }
+
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        UNUserNotificationCenter.current().setBadgeCount(pendingCount)
+        print("📱 Updated badge count to: \(pendingCount)")
+    }
+
     private func scheduleNotification(for episode: Episode, checkInType: CheckInType) -> String? {
         let notificationID = "\(episode.persistentModelID)_\(checkInType.rawValue)"
         

@@ -92,6 +92,7 @@ struct EpisodeSummaryView: View {
         "How do you think you'll feel tomorrow?",
         "How do you think you'll feel about this in 2 weeks?",
         "What's the worst that can happen?",
+        "What would Christina say?",
         "How about in 3 months?",
         "How will you feel 3 months from now?"
         // The title is handled separately and not shown in the prompts section
@@ -437,6 +438,8 @@ struct EpisodeSummaryView: View {
     }
     
     private func deleteCheckIn(_ checkIn: CheckIn) {
+        let checkInType = checkIn.checkInType
+
         withAnimation {
             modelContext.delete(checkIn)
             do {
@@ -448,11 +451,11 @@ struct EpisodeSummaryView: View {
                 return
             }
         }
-        
-        // If the check-in is deleted, we might want to reschedule the notification
-        // (in case user wants another chance to add the check-in)
+
+        // Give the user another chance at this check-in: re-schedule only the
+        // deleted type's notification, leaving other pending ones untouched.
         if let episode = episode {
-            episode.scheduleNotifications()
+            episode.rescheduleNotification(for: checkInType)
         }
     }
     

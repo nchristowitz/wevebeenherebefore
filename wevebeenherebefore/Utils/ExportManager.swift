@@ -65,48 +65,54 @@ class ExportManager {
     // MARK: - CSV Export
     private func generateCSV(episodes: [Episode], cards: [Card]) -> String {
         var csv = ""
-        
+
         // Episodes CSV
         csv += "EPISODES\n"
-        csv += "Title,Date,Created,Emotions,Prompts\n"
-        
+        csv += "Title,Date,Created,Emotions,Prompts,Summary\n"
+
         for episode in episodes.sorted(by: { $0.createdAt > $1.createdAt }) {
             let emotionsStr = episode.emotions.map { "\($0.key):\($0.value)" }.joined(separator: "; ")
             let promptsStr = episode.prompts.map { "\($0.key): \($0.value)" }.joined(separator: "; ")
-            
-            csv += "\"\(episode.title)\",\"\(displayDateFormatter.string(from: episode.date))\",\"\(displayDateFormatter.string(from: episode.createdAt))\",\"\(emotionsStr)\",\"\(promptsStr)\"\n"
+
+            csv += csvRow([episode.title, displayDateFormatter.string(from: episode.date), displayDateFormatter.string(from: episode.createdAt), emotionsStr, promptsStr, episode.summary ?? ""])
         }
-        
+
         csv += "\n"
-        
+
         // Cards CSV
         csv += "CARDS\n"
         csv += "Type,Text,Date,Created\n"
-        
+
         for card in cards.sorted(by: { $0.createdAt > $1.createdAt }) {
             let dateStr = card.date.map { displayDateFormatter.string(from: $0) } ?? ""
-            csv += "\"\(card.type.rawValue)\",\"\(card.text)\",\"\(dateStr)\",\"\(displayDateFormatter.string(from: card.createdAt))\"\n"
+            csv += csvRow([card.type.rawValue, card.text, dateStr, displayDateFormatter.string(from: card.createdAt)])
         }
-        
+
         csv += "\n"
-        
+
         // Notes and Check-ins CSV
         csv += "NOTES_AND_CHECKINS\n"
         csv += "Episode Title,Type,Text,Created\n"
-        
+
         for episode in episodes {
             // Notes
             for note in episode.notes.sorted(by: { $0.createdAt > $1.createdAt }) {
-                csv += "\"\(episode.title)\",\"Note\",\"\(note.text)\",\"\(displayDateFormatter.string(from: note.createdAt))\"\n"
+                csv += csvRow([episode.title, "Note", note.text, displayDateFormatter.string(from: note.createdAt)])
             }
-            
+
             // Check-ins
             for checkIn in episode.checkIns.sorted(by: { $0.createdAt > $1.createdAt }) {
-                csv += "\"\(episode.title)\",\"\(checkIn.checkInType.displayName)\",\"\(checkIn.text)\",\"\(displayDateFormatter.string(from: checkIn.createdAt))\"\n"
+                csv += csvRow([episode.title, checkIn.checkInType.displayName, checkIn.text, displayDateFormatter.string(from: checkIn.createdAt)])
             }
         }
-        
+
         return csv
+    }
+
+    // Quote every field and double any embedded quotes per RFC 4180
+    private func csvRow(_ fields: [String]) -> String {
+        fields.map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
+            .joined(separator: ",") + "\n"
     }
     
     // MARK: - JSON Export
@@ -114,7 +120,7 @@ class ExportManager {
         let exportData: [String: Any] = [
             "exportDate": ISO8601DateFormatter().string(from: Date()),
             "appName": "We've Been Here Before",
-            "version": "1.0",
+            "version": "1.1",
             "episodes": episodes.map { episodeToDict($0) },
             "cards": cards.map { cardToDict($0) }
         ]
@@ -128,12 +134,13 @@ class ExportManager {
     }
     
     private func episodeToDict(_ episode: Episode) -> [String: Any] {
-        return [
+        var dict: [String: Any] = [
             "title": episode.title,
             "date": ISO8601DateFormatter().string(from: episode.date),
             "createdAt": ISO8601DateFormatter().string(from: episode.createdAt),
             "emotions": episode.emotions,
             "prompts": episode.prompts,
+            "dismissedCheckIns": episode.dismissedCheckIns,
             "notes": episode.notes.map { [
                 "text": $0.text,
                 "createdAt": ISO8601DateFormatter().string(from: $0.createdAt)
@@ -144,6 +151,16 @@ class ExportManager {
                 "createdAt": ISO8601DateFormatter().string(from: $0.createdAt)
             ]}
         ]
+
+        if let summary = episode.summary {
+            dict["summary"] = summary
+        }
+
+        if let summaryCreatedAt = episode.summaryCreatedAt {
+            dict["summaryCreatedAt"] = ISO8601DateFormatter().string(from: summaryCreatedAt)
+        }
+
+        return dict
     }
     
     private func cardToDict(_ card: Card) -> [String: Any] {
@@ -165,8 +182,9 @@ class ExportManager {
         if let imageData = card.imageData {
             dict["hasImage"] = true
             dict["imageSize"] = imageData.count
+            dict["imageData"] = imageData.base64EncodedString()
         }
-        
+
         return dict
     }
     
@@ -180,7 +198,16 @@ class ExportManager {
         for episode in episodes.sorted(by: { $0.createdAt > $1.createdAt }) {
             markdown += "### \(episode.title)\n"
             markdown += "**Date:** \(displayDateFormatter.string(from: episode.date))\n\n"
-            
+
+            // Summary
+            if let summary = episode.summary, !summary.isEmpty {
+                markdown += "**Summary"
+                if let summaryCreatedAt = episode.summaryCreatedAt {
+                    markdown += " (\(displayDateFormatter.string(from: summaryCreatedAt)))"
+                }
+                markdown += ":**\n\(summary)\n\n"
+            }
+
             // Emotions
             if !episode.emotions.isEmpty {
                 markdown += "**Emotions:**\n"

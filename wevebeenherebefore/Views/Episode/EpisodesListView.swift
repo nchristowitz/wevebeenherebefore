@@ -206,35 +206,7 @@ struct EpisodesListView: View {
     }
 
     private func updateBadgeCount() {
-        // Count pending check-ins across all episodes
-        let descriptor = FetchDescriptor<Episode>()
-
-        do {
-            let episodes = try modelContext.fetch(descriptor)
-            var pendingCount = 0
-
-            for episode in episodes {
-                let completedCheckInTypes = Set(episode.checkIns.map { $0.checkInType })
-                for checkInType in CheckInType.allCases {
-                    if !completedCheckInTypes.contains(checkInType) &&
-                       !episode.isCheckInDismissed(for: checkInType) &&
-                       episode.isCheckInWindowActive(for: checkInType) {
-                        pendingCount += 1
-                    }
-                }
-            }
-
-            DispatchQueue.main.async {
-                // Clear delivered notifications from notification center
-                UNUserNotificationCenter.current().removeAllDeliveredNotifications()
-                // Update badge to reflect actual pending count
-                UNUserNotificationCenter.current().setBadgeCount(pendingCount)
-                print("📱 Updated badge count to: \(pendingCount)")
-            }
-        } catch {
-            print("❌ Error updating badge count: \(error)")
-            UNUserNotificationCenter.current().setBadgeCount(0)
-        }
+        NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
     }
 }
 
