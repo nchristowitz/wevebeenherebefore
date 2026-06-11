@@ -1,6 +1,22 @@
 import SwiftUI
 import SwiftData
 
+// What the remember carousel can show for a past episode: its distilled
+// summary (the lesson) or a prediction-vs-reality pair (the receipt)
+enum RememberItem: Identifiable {
+    case summary(Episode)
+    case predictionReality(PredictionRealityPair)
+
+    var id: String {
+        switch self {
+        case .summary(let episode):
+            return "summary_\(episode.uuid.uuidString)"
+        case .predictionReality(let pair):
+            return "pair_\(pair.id)"
+        }
+    }
+}
+
 struct RememberView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Episode.createdAt, order: .reverse) private var allEpisodes: [Episode]
@@ -10,19 +26,29 @@ struct RememberView: View {
 
     @State private var opacity: Double = 0
     @State private var currentIndex: Int = 0
-    @State private var shuffledEpisodes: [Episode] = []
+    @State private var shuffledItems: [RememberItem] = []
 
-    // Episodes with summaries (excluding current)
-    private var summarizedEpisodes: [Episode] {
-        allEpisodes.filter { episode in
-            episode.persistentModelID != currentEpisode.persistentModelID && episode.hasSummary
-        }
+    // Summaries and prediction-vs-reality pairs from past episodes
+    // (excluding the one just created)
+    private var rememberItems: [RememberItem] {
+        allEpisodes
+            .filter { $0.persistentModelID != currentEpisode.persistentModelID }
+            .flatMap { episode -> [RememberItem] in
+                var items: [RememberItem] = []
+                if episode.hasSummary {
+                    items.append(.summary(episode))
+                }
+                if let pair = episode.bestPredictionRealityPair {
+                    items.append(.predictionReality(pair))
+                }
+                return items
+            }
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
-                if summarizedEpisodes.isEmpty {
+                if rememberItems.isEmpty {
                     // Empty state - shouldn't normally be shown since coordinator skips this
                     VStack(spacing: 16) {
                         Image(systemName: "heart.circle")
@@ -59,9 +85,18 @@ struct RememberView: View {
 
                         // Carousel
                         TabView(selection: $currentIndex) {
-                            ForEach(Array(shuffledEpisodes.enumerated()), id: \.element.id) { index, episode in
-                                EpisodeSummaryCard(episode: episode)
-                                    .tag(index)
+                            ForEach(Array(shuffledItems.enumerated()), id: \.element.id) { index, item in
+                                Group {
+                                    switch item {
+                                    case .summary(let episode):
+                                        EpisodeSummaryCard(episode: episode)
+                                    case .predictionReality(let pair):
+                                        PredictionRealityCard(pair: pair)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 8)
+                                    }
+                                }
+                                .tag(index)
                             }
                         }
                         .tabViewStyle(.page(indexDisplayMode: .automatic))
@@ -121,8 +156,8 @@ struct RememberView: View {
             }
             .opacity(opacity)
             .onAppear {
-                if shuffledEpisodes.isEmpty {
-                    shuffledEpisodes = summarizedEpisodes.shuffled()
+                if shuffledItems.isEmpty {
+                    shuffledItems = rememberItems.shuffled()
                 }
                 withAnimation(.easeIn(duration: 0.5)) {
                     opacity = 1.0

@@ -13,7 +13,8 @@ struct CheckInView: View {
     
     @State private var checkInText: String = ""
     @State private var isOriginalResponseExpanded: Bool = false
-    
+    @State private var verdictPair: PredictionRealityPair?
+
     init(episode: Episode, checkInType: CheckInType, existingCheckIn: CheckIn? = nil, onCompletion: (() -> Void)? = nil) {
         self.episode = episode
         self.checkInType = checkInType
@@ -21,9 +22,79 @@ struct CheckInView: View {
         self.onCompletion = onCompletion
         _checkInText = State(initialValue: existingCheckIn?.text ?? "")
     }
-    
+
     var body: some View {
         NavigationView {
+            if let pair = verdictPair {
+                verdictView(for: pair)
+            } else {
+                editorView
+            }
+        }
+        .onAppear {
+            isFocused = true
+        }
+    }
+
+    // The "we've been here before" proof moment shown right after saving:
+    // what you predicted at episode time next to what you just wrote
+    private func verdictView(for pair: PredictionRealityPair) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("We've been here before")
+                    .font(.title)
+                    .fontWeight(.bold)
+
+                Text("What you feared then, and what you know now.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 40)
+            .padding(.bottom, 8)
+
+            PredictionRealityCard(pair: pair)
+                .padding(.vertical, 8)
+
+            continueButton
+                .padding(.top, 8)
+                .padding(.bottom, 20)
+        }
+        .padding(.horizontal)
+    }
+
+    @ViewBuilder
+    private var continueButton: some View {
+        if #available(iOS 26.0, *) {
+            Button(action: finishVerdict) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .glassEffect()
+            }
+        } else {
+            Button(action: finishVerdict) {
+                Text("Continue")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(.thickMaterial)
+                    )
+            }
+        }
+    }
+
+    private func finishVerdict() {
+        onCompletion?()
+        dismiss()
+    }
+
+    private var editorView: some View {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(isEditing ? "Edit \(checkInType.displayName.lowercased())" : "Add \(checkInType.displayName.lowercased())")
@@ -55,7 +126,7 @@ struct CheckInView: View {
                     )
                 
                 // Show original response if available
-                if let originalResponse = getOriginalResponse() {
+                if let originalResponse = episode.prediction(for: checkInType) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Your original response:")
                             .font(.caption)
@@ -101,12 +172,8 @@ struct CheckInView: View {
                     .disabled(checkInText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
-        }
-        .onAppear {
-            isFocused = true
-        }
     }
-    
+
     private var isEditing: Bool {
         existingCheckIn != nil
     }
@@ -121,21 +188,6 @@ struct CheckInView: View {
             return "After 3 months, what's your perspective on this episode? Has it affected you as much as you thought it would?"
         }
     }
-    
-    
-    // Map check-in types to their corresponding prompts
-    private func getOriginalResponse() -> String? {
-        switch checkInType {
-        case .twentyFourHour:
-            return episode.prompts["How do you think you'll feel tomorrow?"]
-        case .twoWeek:
-            return episode.prompts["How do you think you'll feel about this in 2 weeks?"]
-        case .threeMonth:
-            // Handle both old and new prompt texts
-            return episode.prompts["How about in 3 months?"] ?? episode.prompts["How will you feel 3 months from now?"]
-        }
-    }
-    
     private func saveCheckIn() {
         let trimmedText = checkInText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
@@ -157,10 +209,25 @@ struct CheckInView: View {
             // Recalculate the badge from actual pending check-ins rather than
             // zeroing it, in case other episodes still have one pending
             NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
-            
-            onCompletion?()
-            dismiss()
-            
+
+            // For a fresh check-in with a prediction on record, show the
+            // proof moment before closing; otherwise close straight away
+            if existingCheckIn == nil, let prediction = episode.prediction(for: checkInType) {
+                isFocused = false
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    verdictPair = PredictionRealityPair(
+                        episode: episode,
+                        checkInType: checkInType,
+                        prediction: prediction,
+                        reality: trimmedText,
+                        realityDate: Date()
+                    )
+                }
+            } else {
+                onCompletion?()
+                dismiss()
+            }
+
         } catch {
             // Handle the error gracefully
             print("Error saving check-in: \(error)")

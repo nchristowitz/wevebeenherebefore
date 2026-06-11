@@ -121,9 +121,22 @@ struct CheckInWindowTests {
     }
 
     @Test func pendingExcludesDismissedCheckIns() throws {
+        // pendingCheckInTypes requires a live context — detached models
+        // (e.g. mid-deletion) deliberately report nothing pending
+        let container = try ModelContainer(
+            for: Episode.self, Card.self, EpisodeNote.self, CheckIn.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+
         let episode = Episode(title: "Test", emotions: [:], prompts: [:])
         // Put the episode 14 days in the past so the 2-week window is active
         episode.date = Calendar.current.date(byAdding: .day, value: -14, to: Date())!
+
+        // Unmanaged: no pending check-ins regardless of window state
+        #expect(episode.pendingCheckInTypes.isEmpty)
+
+        context.insert(episode)
 
         #expect(episode.isCheckInWindowActive(for: .twoWeek))
         #expect(episode.pendingCheckInTypes == [.twoWeek])
@@ -180,5 +193,64 @@ struct EpisodeUUIDTests {
         let a = Episode(title: "A", emotions: [:], prompts: [:])
         let b = Episode(title: "B", emotions: [:], prompts: [:])
         #expect(a.uuid != b.uuid)
+    }
+}
+
+struct PredictionRealityTests {
+
+    @Test func predictionFindsCurrentAndLegacyPromptWordings() {
+        let current = Episode(title: "Current", emotions: [:], prompts: [
+            "How do you think you'll feel about this in 2 weeks?": "Still terrible",
+            "How will you feel 3 months from now?": "Probably fine"
+        ])
+        #expect(current.prediction(for: .twoWeek) == "Still terrible")
+        #expect(current.prediction(for: .threeMonth) == "Probably fine")
+        #expect(current.prediction(for: .twentyFourHour) == nil)
+
+        // Old episodes carry wordings from earlier versions of the flow
+        let legacy = Episode(title: "Legacy", emotions: [:], prompts: [
+            "How do you think you'll feel two weeks from now?": "Awful, surely",
+            "What about 3 months from now?": "Who knows"
+        ])
+        #expect(legacy.prediction(for: .twoWeek) == "Awful, surely")
+        #expect(legacy.prediction(for: .threeMonth) == "Who knows")
+    }
+
+    @Test func pairsRequireBothPredictionAndCheckIn() {
+        let episode = Episode(title: "Test", emotions: [:], prompts: [
+            "How do you think you'll feel tomorrow?": "Dreadful",
+            "How do you think you'll feel about this in 2 weeks?": "Embarrassed forever"
+        ])
+
+        // No check-ins yet — no pairs despite two predictions
+        #expect(episode.predictionRealityPairs.isEmpty)
+        #expect(episode.bestPredictionRealityPair == nil)
+
+        // A 2w check-in completes that pair only
+        let twoWeek = CheckIn(text: "Barely think about it", checkInType: .twoWeek, episode: episode)
+        episode.checkIns.append(twoWeek)
+
+        let pairs = episode.predictionRealityPairs
+        #expect(pairs.count == 1)
+        #expect(pairs.first?.checkInType == .twoWeek)
+        #expect(pairs.first?.prediction == "Embarrassed forever")
+        #expect(pairs.first?.reality == "Barely think about it")
+
+        // A 3m check-in without a matching prediction prompt adds no pair
+        let threeMonth = CheckIn(text: "What episode?", checkInType: .threeMonth, episode: episode)
+        episode.checkIns.append(threeMonth)
+        #expect(episode.predictionRealityPairs.count == 1)
+    }
+
+    @Test func bestPairPrefersLongestHorizon() {
+        let episode = Episode(title: "Test", emotions: [:], prompts: [
+            "How do you think you'll feel tomorrow?": "Dreadful",
+            "How will you feel 3 months from now?": "Scarred for life"
+        ])
+        episode.checkIns.append(CheckIn(text: "Rough but ok", checkInType: .twentyFourHour, episode: episode))
+        episode.checkIns.append(CheckIn(text: "Completely forgotten", checkInType: .threeMonth, episode: episode))
+
+        #expect(episode.predictionRealityPairs.count == 2)
+        #expect(episode.bestPredictionRealityPair?.checkInType == .threeMonth)
     }
 }
