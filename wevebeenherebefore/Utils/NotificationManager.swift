@@ -200,6 +200,10 @@ class NotificationManager: ObservableObject {
     // carries a stale persistentModelID string that deep-linking can't match.
     // Cancel them via the stored IDs (always reliable) and re-schedule the
     // still-relevant ones with UUID-based IDs.
+    // @MainActor is load-bearing: callers pass the container's mainContext,
+    // and without it an await from a SwiftUI .task hops this function onto a
+    // background executor — using that context off-main crashes in save().
+    @MainActor
     func migrateNotificationsToUUIDIfNeeded(modelContext: ModelContext) async {
         let migrationKey = "didMigrateNotificationsToUUID"
         guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
