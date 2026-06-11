@@ -84,7 +84,9 @@ class NotificationManager: ObservableObject {
     }
 
     private func scheduleNotification(for episode: Episode, checkInType: CheckInType) -> String? {
-        let notificationID = "\(episode.persistentModelID)_\(checkInType.rawValue)"
+        // Built from the episode's stable UUID — persistentModelID changes
+        // between its temporary and permanent form and must not be used here
+        let notificationID = "\(episode.uuid.uuidString)_\(checkInType.rawValue)"
         
         // Calculate notification date
         guard let notificationDate = calculateNotificationDate(for: episode, checkInType: checkInType) else {
@@ -111,17 +113,12 @@ class NotificationManager: ObservableObject {
         content.badge = NSNumber(value: 1)
         
         // Add episode data for when notification is tapped
-        // Store the persistent ID as a string - SwiftData will handle the lookup
-        let episodeIDString = "\(episode.persistentModelID)"
-        
         content.userInfo = [
-            "episodeID": episodeIDString,
+            "episodeID": episode.uuid.uuidString,
             "checkInType": checkInType.rawValue
         ]
-        
-        print("🔍 Storing episodeID in notification: '\(episodeIDString)'")
-        
-        
+
+
         // Create trigger
         let calendar = Calendar.current
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: notificationDate)
@@ -198,35 +195,45 @@ class NotificationManager: ObservableObject {
         }
     }
     
-    func cancelNotification(with id: String) {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
-        print("🗑️ Cancelled notification with ID: \(id)")
-    }
-    
-    func cancelAllNotifications(for episode: Episode) {
-        let notificationIDs = CheckInType.allCases.map { "\(episode.persistentModelID)_\($0.rawValue)" }
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: notificationIDs)
-        print("🗑️ Cancelled all notifications for episode: \(episode.title)")
-    }
-    
-    func cancelNotificationForCheckIn(episode: Episode, checkInType: CheckInType) {
-        let notificationID = "\(episode.persistentModelID)_\(checkInType.rawValue)"
-        cancelNotification(with: notificationID)
-    }
-    
-    // Debug function to check pending notifications
-    func debugPendingNotifications() {
-        UNUserNotificationCenter.current().getPendingNotificationRequests { requests in
-            print("📋 Total pending notifications: \(requests.count)")
-            for request in requests {
-                if let trigger = request.trigger as? UNCalendarNotificationTrigger {
-                    let components = trigger.dateComponents
-                    print("📅 Pending: \(request.identifier) - \(components)")
-                }
+    // One-time migration to UUID-based notification identifiers. Episodes
+    // created before the uuid field have pending notifications whose userInfo
+    // carries a stale persistentModelID string that deep-linking can't match.
+    // Cancel them via the stored IDs (always reliable) and re-schedule the
+    // still-relevant ones with UUID-based IDs.
+    func migrateNotificationsToUUIDIfNeeded(modelContext: ModelContext) async {
+        let migrationKey = "didMigrateNotificationsToUUID"
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+
+        await checkPermission()
+        guard hasPermission else {
+            // Nothing can be scheduled without permission; retry next launch
+            return
+        }
+
+        let episodes = (try? modelContext.fetch(FetchDescriptor<Episode>())) ?? []
+
+        for episode in episodes {
+            if !episode.notificationIDs.isEmpty {
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: episode.notificationIDs)
+            }
+
+            // Re-schedule only check-ins that are still ahead of the user;
+            // scheduleNotification itself skips dates already in the past
+            episode.notificationIDs = CheckInType.allCases.compactMap { type in
+                guard !episode.hasCheckIn(for: type), !episode.isCheckInDismissed(for: type) else { return nil }
+                return scheduleNotification(for: episode, checkInType: type)
             }
         }
+
+        do {
+            try modelContext.save()
+            UserDefaults.standard.set(true, forKey: migrationKey)
+            print("✅ Migrated notifications to UUID-based IDs for \(episodes.count) episodes")
+        } catch {
+            print("❌ Notification migration failed to save: \(error)")
+        }
     }
-    
+
 }
 
 

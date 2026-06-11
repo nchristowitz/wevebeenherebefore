@@ -179,6 +179,14 @@ struct EpisodeFlowCoordinator: View {
         )
         modelContext.insert(episode)
 
+        // Persist immediately rather than waiting for autosave — the episode
+        // is the user's writing and should hit disk before anything else runs
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Error saving episode: \(error)")
+        }
+
         // Enhanced notification scheduling with better error handling
         Task {
             // Always check permission first

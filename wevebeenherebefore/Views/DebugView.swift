@@ -180,13 +180,13 @@ struct DebugView: View {
             content.sound = .default
             content.badge = 1
             
-            // Use the actual episode ID from the latest episode
-            let episodeIDString = "\(latestEpisode.persistentModelID)"
+            // Use the actual episode UUID from the latest episode
+            let episodeIDString = latestEpisode.uuid.uuidString
             content.userInfo = [
                 "checkInType": checkInType.rawValue,
                 "episodeID": episodeIDString
             ]
-            
+
             print("🔍 Debug notification using episode ID: '\(episodeIDString)' for episode: '\(latestEpisode.title)'")
             
             // Trigger immediately

@@ -169,19 +169,10 @@ struct EpisodesListView: View {
         do {
             let episodes = try modelContext.fetch(descriptor)
 
-            print("🔍 Looking for episode ID: '\(navigation.episodeID)'")
-            print("🔍 Available episodes: \(episodes.count)")
-
-            // Try to find episode by converting both IDs to strings for comparison
-            var foundEpisode: Episode?
-            for episode in episodes {
-                let episodeIDString = "\(episode.persistentModelID)"
-                print("  - Episode '\(episode.title)': '\(episodeIDString)'")
-                if episodeIDString == navigation.episodeID {
-                    foundEpisode = episode
-                    break
-                }
-            }
+            // Match by stable UUID; fall back to the legacy persistentModelID
+            // format for notifications scheduled before the UUID migration
+            let foundEpisode = episodes.first { $0.uuid.uuidString == navigation.episodeID }
+                ?? episodes.first { "\($0.persistentModelID)" == navigation.episodeID }
 
             if let episode = foundEpisode {
                 // Check if this check-in already exists
