@@ -74,7 +74,9 @@ struct wevebeenherebeforeApp: App {
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            ensureUniqueEpisodeUUIDs(in: container)
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
@@ -83,8 +85,41 @@ struct wevebeenherebeforeApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
+                .task {
+                    await NotificationManager.shared.migrateNotificationsToUUIDIfNeeded(
+                        modelContext: sharedModelContainer.mainContext
+                    )
+                }
         }
         .modelContainer(sharedModelContainer)
+    }
+}
+
+// SwiftData's lightweight migration can stamp every pre-existing episode with
+// the same default UUID. Notification identity needs them unique, so backfill
+// any duplicates once at launch.
+func ensureUniqueEpisodeUUIDs(in container: ModelContainer) {
+    let context = ModelContext(container)
+    guard let episodes = try? context.fetch(FetchDescriptor<Episode>()) else { return }
+
+    var seen = Set<UUID>()
+    var changed = false
+
+    for episode in episodes {
+        if seen.contains(episode.uuid) {
+            episode.uuid = UUID()
+            changed = true
+        }
+        seen.insert(episode.uuid)
+    }
+
+    if changed {
+        do {
+            try context.save()
+            print("✅ Backfilled unique UUIDs for episodes")
+        } catch {
+            print("❌ Failed to backfill episode UUIDs: \(error)")
+        }
     }
 }
 

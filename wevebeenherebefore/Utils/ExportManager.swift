@@ -135,6 +135,7 @@ class ExportManager {
     
     private func episodeToDict(_ episode: Episode) -> [String: Any] {
         var dict: [String: Any] = [
+            "uuid": episode.uuid.uuidString,
             "title": episode.title,
             "date": ISO8601DateFormatter().string(from: episode.date),
             "createdAt": ISO8601DateFormatter().string(from: episode.createdAt),

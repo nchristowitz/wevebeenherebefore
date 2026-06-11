@@ -4,6 +4,12 @@ import UserNotifications
 
 @Model
 final class Episode {
+    // Stable identity for notification payloads — persistentModelID changes
+    // between its temporary and permanent form, so it must never be used there.
+    // No @Attribute(.unique): lightweight migration can stamp all existing rows
+    // with one default value, which a unique constraint would turn into a crash.
+    // ensureUniqueEpisodeUUIDs() backfills duplicates at launch instead.
+    var uuid: UUID = UUID()
     var title: String
     var date: Date
     var emotions: [String: Int] // Store emotion name and rating
@@ -130,9 +136,13 @@ final class Episode {
     }
     
     func cancelNotificationForCheckIn(_ checkInType: CheckInType) {
-        NotificationManager.shared.cancelNotificationForCheckIn(episode: self, checkInType: checkInType)
-        // Remove the specific notification ID from our list
-        let notificationID = "\(self.persistentModelID)_\(checkInType.rawValue)"
-        notificationIDs.removeAll { $0 == notificationID }
+        // Cancel via the stored IDs rather than regenerating them; the suffix
+        // match also covers IDs created before the UUID-based format
+        let ids = notificationIDs.filter { $0.hasSuffix("_\(checkInType.rawValue)") }
+        guard !ids.isEmpty else { return }
+
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        notificationIDs.removeAll { ids.contains($0) }
+        print("🗑️ Cancelled \(checkInType.displayName) notification using stored IDs")
     }
 }

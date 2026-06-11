@@ -57,7 +57,13 @@ class ImportManager {
                       let prompts = episodeDict["prompts"] as? [String: String] else { continue }
                 
                 let episode = Episode(title: title, emotions: emotions, prompts: prompts)
-                
+
+                // Keep the episode's stable identity if the export carried one
+                if let uuidString = episodeDict["uuid"] as? String,
+                   let uuid = UUID(uuidString: uuidString) {
+                    episode.uuid = uuid
+                }
+
                 // Set the original date if available
                 if let dateString = episodeDict["date"] as? String,
                    let date = ISO8601DateFormatter().date(from: dateString) {

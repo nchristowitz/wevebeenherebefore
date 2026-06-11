@@ -70,6 +70,7 @@ struct ExportImportRoundTripTests {
         // Verify the episode survived intact
         let importedEpisodes = try destContext.fetch(FetchDescriptor<Episode>())
         let importedEpisode = try #require(importedEpisodes.first)
+        #expect(importedEpisode.uuid == episode.uuid)
         #expect(importedEpisode.title == "Roundtrip Episode")
         #expect(importedEpisode.emotions == ["Anxiety": 4, "Sadness": 2])
         #expect(importedEpisode.prompts["Describe the episode"] == "It was a \"hard\" day,\nwith a comma")
@@ -132,5 +133,52 @@ struct CheckInWindowTests {
 
         #expect(episode.pendingCheckInTypes.isEmpty)
         #expect(!episode.hasPendingCheckIn)
+    }
+}
+
+struct EpisodeUUIDTests {
+
+    // SwiftData's lightweight migration can stamp all pre-existing episodes
+    // with the same default UUID; the launch backfill must make them unique
+    // without touching episodes that already have distinct UUIDs.
+    @Test func backfillRegeneratesDuplicateUUIDs() throws {
+        let container = try ModelContainer(
+            for: Episode.self, Card.self, EpisodeNote.self, CheckIn.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+
+        // Simulate the post-migration state: three episodes sharing one UUID,
+        // plus one that's already unique
+        let sharedUUID = UUID()
+        let uniqueUUID = UUID()
+        for index in 0..<3 {
+            let episode = Episode(title: "Duplicate \(index)", emotions: [:], prompts: [:])
+            episode.uuid = sharedUUID
+            context.insert(episode)
+        }
+        let distinctEpisode = Episode(title: "Distinct", emotions: [:], prompts: [:])
+        distinctEpisode.uuid = uniqueUUID
+        context.insert(distinctEpisode)
+        try context.save()
+
+        ensureUniqueEpisodeUUIDs(in: container)
+
+        // Verify through a fresh context so we read persisted state, not
+        // objects cached by the inserting context
+        let verifyContext = ModelContext(container)
+        let episodes = try verifyContext.fetch(FetchDescriptor<Episode>())
+        let uuids = episodes.map(\.uuid)
+        #expect(Set(uuids).count == 4)
+        // The already-unique episode keeps its UUID
+        #expect(episodes.first { $0.title == "Distinct" }?.uuid == uniqueUUID)
+        // One of the duplicates keeps the original; the others were regenerated
+        #expect(uuids.filter { $0 == sharedUUID }.count == 1)
+    }
+
+    @Test func newEpisodesGetDistinctUUIDs() {
+        let a = Episode(title: "A", emotions: [:], prompts: [:])
+        let b = Episode(title: "B", emotions: [:], prompts: [:])
+        #expect(a.uuid != b.uuid)
     }
 }
