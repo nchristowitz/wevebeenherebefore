@@ -2,6 +2,20 @@ import SwiftUI
 import SwiftData
 import UserNotifications
 
+// A prediction made during the episode alongside what the user actually
+// wrote when the matching check-in came due
+struct PredictionRealityPair: Identifiable {
+    let episode: Episode
+    let checkInType: CheckInType
+    let prediction: String
+    let reality: String
+    let realityDate: Date
+
+    var id: String {
+        "\(episode.uuid.uuidString)_\(checkInType.rawValue)"
+    }
+}
+
 @Model
 final class Episode {
     // Stable identity for notification payloads — persistentModelID changes
@@ -81,6 +95,58 @@ final class Episode {
     
     func hasCheckIn(for type: CheckInType) -> Bool {
         return checkIns.contains { $0.checkInType == type }
+    }
+
+    // Prompt questions whose responses predict how a given check-in will
+    // feel. Later entries are wordings used by earlier versions of the
+    // episode flow — old episodes still carry them as keys.
+    static func predictionPromptKeys(for type: CheckInType) -> [String] {
+        switch type {
+        case .twentyFourHour:
+            return ["How do you think you'll feel tomorrow?"]
+        case .twoWeek:
+            return [
+                "How do you think you'll feel about this in 2 weeks?",
+                "How do you think you'll feel two weeks from now?"
+            ]
+        case .threeMonth:
+            return [
+                "How will you feel 3 months from now?",
+                "How about in 3 months?",
+                "What about 3 months from now?"
+            ]
+        }
+    }
+
+    // What the user predicted at episode time for this check-in horizon
+    func prediction(for type: CheckInType) -> String? {
+        for key in Episode.predictionPromptKeys(for: type) {
+            if let response = prompts[key], !response.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return response
+            }
+        }
+        return nil
+    }
+
+    // Completed check-ins that have a matching prediction to compare against
+    var predictionRealityPairs: [PredictionRealityPair] {
+        CheckInType.allCases.compactMap { type in
+            guard let prediction = prediction(for: type),
+                  let checkIn = checkIn(for: type),
+                  !checkIn.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+            return PredictionRealityPair(
+                episode: self,
+                checkInType: type,
+                prediction: prediction,
+                reality: checkIn.text,
+                realityDate: checkIn.createdAt
+            )
+        }
+    }
+
+    // The longest-horizon pair — the most perspective, the strongest proof
+    var bestPredictionRealityPair: PredictionRealityPair? {
+        predictionRealityPairs.max { $0.checkInType.daysFromEpisode < $1.checkInType.daysFromEpisode }
     }
     
     func checkIn(for type: CheckInType) -> CheckIn? {

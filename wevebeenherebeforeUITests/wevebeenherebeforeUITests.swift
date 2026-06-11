@@ -10,34 +10,52 @@ import XCTest
 final class wevebeenherebeforeUITests: XCTestCase {
 
     override func setUpWithError() throws {
-        // Put setup code here. This method is called before the invocation of each test method in the class.
-
         // In UI tests it is usually best to stop immediately when a failure occurs.
         continueAfterFailure = false
-
-        // In UI tests it’s important to set the initial state - such as interface orientation - required for your tests before they run. The setUp method is a good place to do this.
     }
 
-    override func tearDownWithError() throws {
-        // Put teardown code here. This method is called after the invocation of each test method in the class.
-    }
-
+    // Completes a pending check-in and verifies the prediction-vs-reality
+    // verdict moment appears. Requires an episode with an active check-in
+    // window and a prediction on record (the local store must be seeded —
+    // see the episode flow, or a planted fixture store).
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
+    func testCheckInShowsVerdictMoment() throws {
         let app = XCUIApplication()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-
-    @MainActor
-    func testLaunchPerformance() throws {
-        if #available(macOS 10.15, iOS 13.0, tvOS 13.0, watchOS 7.0, *) {
-            // This measures how long it takes to launch your application.
-            measure(metrics: [XCTApplicationLaunchMetric()]) {
-                XCUIApplication().launch()
-            }
+        // A pending check-in card on the Resilience tab (the default tab)
+        let checkInCard = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH '24 Hour Check-in'"))
+            .firstMatch
+        guard checkInCard.waitForExistence(timeout: 5) else {
+            throw XCTSkip("No pending 24h check-in available — store not seeded")
         }
+        checkInCard.tap()
+
+        // Write the check-in
+        let editor = app.textViews.firstMatch
+        XCTAssertTrue(editor.waitForExistence(timeout: 5))
+        editor.tap()
+        editor.typeText("Honestly, nobody cared. One colleague even thanked me because the wrong file was useful to her. I was fine by lunchtime.")
+
+        app.buttons["Save"].tap()
+
+        // The verdict moment: prediction next to what was just written.
+        // Match section labels case-insensitively — .textCase changes how
+        // SwiftUI exposes them to accessibility.
+        XCTAssertTrue(app.staticTexts["We've been here before"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] 'you predicted'")).firstMatch.exists)
+        XCTAssertTrue(app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[c] 'day later'")).firstMatch.exists)
+
+        // Hold the verdict on screen briefly so external tooling can capture it
+        Thread.sleep(forTimeInterval: 10)
+
+        app.buttons["Continue"].tap()
+
+        // Sheet closes; back on the Resilience tab and the card is gone
+        XCTAssertTrue(app.staticTexts["We've been here before"].waitForNonExistence(timeout: 5))
+        XCTAssertFalse(checkInCard.exists)
     }
 }

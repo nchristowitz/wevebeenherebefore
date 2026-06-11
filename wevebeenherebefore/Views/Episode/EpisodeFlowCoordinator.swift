@@ -75,10 +75,12 @@ struct EpisodeFlowCoordinator: View {
     @State private var savedEpisode: Episode?
     @Query private var allEpisodes: [Episode]
 
-    // Check if there are any episodes with summaries (excluding current)
-    private var hasSummarizedEpisodes: Bool {
+    // Whether the remember step has anything to show: a past episode with a
+    // summary or a prediction-vs-reality pair (excluding the one just saved)
+    private var hasRememberContent: Bool {
         allEpisodes.contains { episode in
-            episode.persistentModelID != savedEpisode?.persistentModelID && episode.hasSummary
+            episode.persistentModelID != savedEpisode?.persistentModelID &&
+            (episode.hasSummary || episode.bestPredictionRealityPair != nil)
         }
     }
 
@@ -126,7 +128,7 @@ struct EpisodeFlowCoordinator: View {
                             let episode = saveEpisode()
                             savedEpisode = episode
                             // Skip remember step if no summarized episodes exist
-                            if hasSummarizedEpisodes {
+                            if hasRememberContent {
                                 state.moveToNext()
                             } else {
                                 state.currentStep = .resilienceReminders
