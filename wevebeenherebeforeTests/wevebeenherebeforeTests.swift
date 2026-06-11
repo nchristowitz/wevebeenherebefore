@@ -121,9 +121,22 @@ struct CheckInWindowTests {
     }
 
     @Test func pendingExcludesDismissedCheckIns() throws {
+        // pendingCheckInTypes requires a live context — detached models
+        // (e.g. mid-deletion) deliberately report nothing pending
+        let container = try ModelContainer(
+            for: Episode.self, Card.self, EpisodeNote.self, CheckIn.self,
+            configurations: ModelConfiguration(isStoredInMemoryOnly: true)
+        )
+        let context = ModelContext(container)
+
         let episode = Episode(title: "Test", emotions: [:], prompts: [:])
         // Put the episode 14 days in the past so the 2-week window is active
         episode.date = Calendar.current.date(byAdding: .day, value: -14, to: Date())!
+
+        // Unmanaged: no pending check-ins regardless of window state
+        #expect(episode.pendingCheckInTypes.isEmpty)
+
+        context.insert(episode)
 
         #expect(episode.isCheckInWindowActive(for: .twoWeek))
         #expect(episode.pendingCheckInTypes == [.twoWeek])

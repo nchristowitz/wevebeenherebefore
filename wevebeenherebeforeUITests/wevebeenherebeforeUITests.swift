@@ -57,5 +57,18 @@ final class wevebeenherebeforeUITests: XCTestCase {
         // Sheet closes; back on the Resilience tab and the card is gone
         XCTAssertTrue(app.staticTexts["We've been here before"].waitForNonExistence(timeout: 5))
         XCTAssertFalse(checkInCard.exists)
+
+        // Regression: deleting an episode right after completing its check-in
+        // used to hit a SwiftData fault on the detached model and freeze
+        app.tabBars.buttons["Episodes"].tap()
+        let episodeRow = app.staticTexts["Yesterday's spiral"]
+        XCTAssertTrue(episodeRow.waitForExistence(timeout: 5))
+        episodeRow.swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertTrue(episodeRow.waitForNonExistence(timeout: 5))
+
+        // The app is still alive and responsive
+        app.tabBars.buttons["Resilience"].tap()
+        XCTAssertTrue(app.tabBars.buttons["Resilience"].isSelected)
     }
 }

@@ -167,7 +167,12 @@ final class Episode {
     // completed or dismissed. Single source of truth for badges, dots, and
     // the pending check-in cards.
     var pendingCheckInTypes: [CheckInType] {
-        CheckInType.allCases.filter { type in
+        // In-flight SwiftUI updates can still reference an episode that was
+        // just deleted; touching attributes on a detached model is a
+        // SwiftData fatal error, so treat it as having nothing pending
+        guard modelContext != nil else { return [] }
+
+        return CheckInType.allCases.filter { type in
             isCheckInWindowActive(for: type) && !hasCheckIn(for: type) && !isCheckInDismissed(for: type)
         }
     }

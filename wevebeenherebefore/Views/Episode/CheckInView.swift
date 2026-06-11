@@ -50,7 +50,7 @@ struct CheckInView: View {
                     .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 16)
+            .padding(.top, 40)
             .padding(.bottom, 8)
 
             PredictionRealityCard(pair: pair)
