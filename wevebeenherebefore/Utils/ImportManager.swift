@@ -13,6 +13,10 @@ class ImportManager {
     static let shared = ImportManager()
     private init() {}
     
+    // @MainActor: callers pass SwiftUI's main model context, which must only
+    // be touched on the main actor — without this, the await hops the body
+    // onto a background executor and SwiftData crashes
+    @MainActor
     func importData(from url: URL, into modelContext: ModelContext) async throws -> ImportResult {
         // startAccessingSecurityScopedResource returns false for URLs that
         // aren't security-scoped (e.g. files already inside our sandbox) —
@@ -39,6 +43,7 @@ class ImportManager {
         }
     }
     
+    @MainActor
     private func importFromJSON(data: Data, into modelContext: ModelContext) async throws -> ImportResult {
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw ImportError.invalidFormat
