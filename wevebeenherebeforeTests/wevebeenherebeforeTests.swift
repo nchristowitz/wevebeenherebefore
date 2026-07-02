@@ -40,11 +40,20 @@ struct ExportImportRoundTripTests {
         sourceContext.insert(checkIn)
 
         let imageBytes = Data([0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01, 0x02, 0x03])
+        let artworkBytes = Data([0xCA, 0xFE, 0xF0, 0x0D])
+        let song = CardSong(
+            persistentID: "12345678901234567890",
+            storeID: "1440783625",
+            title: "Here Comes the Sun",
+            artist: "The Beatles",
+            artworkData: artworkBytes
+        )
         let card = Card(
             text: "The cat's fur",
             type: .delight,
             color: Color(.sRGB, red: 0.8, green: 0.4, blue: 0.2, opacity: 1),
-            imageData: imageBytes
+            imageData: imageBytes,
+            song: song
         )
         sourceContext.insert(card)
         try sourceContext.save()
@@ -82,12 +91,13 @@ struct ExportImportRoundTripTests {
         #expect(importedEpisode.checkIns.count == 1)
         #expect(importedEpisode.checkIns.first?.checkInType == .twoWeek)
 
-        // Verify the card photo survived intact
+        // Verify the card photo and song survived intact
         let importedCards = try destContext.fetch(FetchDescriptor<Card>())
         let importedCard = try #require(importedCards.first)
         #expect(importedCard.text == "The cat's fur")
         #expect(importedCard.type == .delight)
         #expect(importedCard.imageData == imageBytes)
+        #expect(importedCard.song == song)
     }
 
     // Quotes in user text must not corrupt CSV columns

@@ -10,15 +10,17 @@ struct AddCardBaseView<Content: View>: View {
     @Binding var selectedColor: Color
     let date: Date?
     let imageData: Data?
+    let song: CardSong?
     let onRemoveImage: (() -> Void)?
     let content: () -> Content
     let existingCard: Card?
 
-    init(type: CardType, selectedColor: Binding<Color>, date: Date? = nil, imageData: Data? = nil, onRemoveImage: (() -> Void)? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
+    init(type: CardType, selectedColor: Binding<Color>, date: Date? = nil, imageData: Data? = nil, song: CardSong? = nil, onRemoveImage: (() -> Void)? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.type = type
         self._selectedColor = selectedColor
         self.date = date
         self.imageData = imageData
+        self.song = song
         self.onRemoveImage = onRemoveImage
         self.existingCard = existingCard
         self.content = content
@@ -102,9 +104,13 @@ struct AddCardBaseView<Content: View>: View {
     }
     
     
+    private var supportsSong: Bool {
+        type == .delight || type == .memory
+    }
+
     private func saveCard() {
-        guard !text.isEmpty || (type == .delight && imageData != nil) else { return }
-        
+        guard !text.isEmpty || (type == .delight && imageData != nil) || (supportsSong && song != nil) else { return }
+
         do {
             if let existingCard = existingCard {
                 existingCard.text = text
@@ -115,13 +121,17 @@ struct AddCardBaseView<Content: View>: View {
                 if type == .delight {
                     existingCard.imageData = imageData
                 }
+                if supportsSong {
+                    existingCard.song = song
+                }
             } else {
                 let card = Card(
                     text: text,
                     type: type,
                     color: selectedColor,
                     date: type == .memory ? date : nil,
-                    imageData: type == .delight ? imageData : nil
+                    imageData: type == .delight ? imageData : nil,
+                    song: supportsSong ? song : nil
                 )
                 modelContext.insert(card)
             }

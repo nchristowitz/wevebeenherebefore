@@ -423,6 +423,13 @@ struct CardView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel(card.text)
             }
+
+            if let song = card.song {
+                CardSongRow(song: song)
+                    .padding(.horizontal, 16)
+                    .padding(.top, card.text.isEmpty ? 16 : 0)
+                    .padding(.bottom, 16)
+            }
         }
         .background(card.color)
         .cornerRadius(20)
