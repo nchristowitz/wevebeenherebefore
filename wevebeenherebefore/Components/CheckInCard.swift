@@ -26,36 +26,49 @@ struct CheckInCard: View {
     private var accessibilityLabel: String {
         return "\(checkInType.displayName) for episode \(episode.title), \(timeRemainingText)"
     }
-    
+
+    // One hue per time horizon, styled like the resilience cards below them.
+    // Fixed RGB (not adaptive system colors) so the contrasting text color
+    // stays the same in light and dark mode, matching how Card colors work.
+    private var accentColor: Color {
+        switch checkInType {
+        case .twentyFourHour: return Color(red: 1.0, green: 0.58, blue: 0.0)   // orange
+        case .twoWeek: return Color(red: 0.19, green: 0.68, blue: 0.78)        // teal
+        case .threeMonth: return Color(red: 0.35, green: 0.34, blue: 0.84)     // indigo
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(checkInType.displayName)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    Text(episode.title)
-                        .font(.subheadline)
-                        .opacity(0.8)
-                    
-                    Text(timeRemainingText)
-                        .font(.caption)
-                        .opacity(0.6)
-                }
-                
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(checkInType.displayName)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .textCase(.uppercase)
+                    .opacity(0.7)
+
                 Spacer()
-                
-                Image(systemName: "arrow.right.circle.fill")
-                    .font(.title2)
+
+                Text(timeRemainingText)
+                    .font(.caption)
                     .opacity(0.7)
             }
-            .padding(24)
-        }
-        .background(Color(.systemBackground))
 
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.07), radius: 4, x: 0, y: 2)
+            HStack(alignment: .center, spacing: 12) {
+                Text(episode.title)
+                    .font(.system(size: 24, weight: .semibold))
+                    .kerning(-0.3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title2)
+                    .opacity(0.8)
+            }
+        }
+        .padding(20)
+        .background(accentColor)
+        .cornerRadius(20)
+        .foregroundColor(accentColor.contrastingTextColor())
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()
