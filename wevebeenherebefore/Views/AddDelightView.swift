@@ -25,37 +25,37 @@ struct AddDelightView: View {
             existingCard: existingCard
         ) {
             HStack {
-                PhotosPicker(
-                    selection: $selectedItem,
-                    matching: .images,
-                    photoLibrary: .shared()
-                ) {
-                    HStack {
-                        Image(systemName: "photo")
-                        Text("Add Photo")
+                GlassAccessoryChip {
+                    PhotosPicker(
+                        selection: $selectedItem,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "photo")
+                            Text("Add Photo")
+                        }
+                        .foregroundColor(selectedColor.contrastingTextColor())
                     }
-                    .foregroundColor(selectedColor.contrastingTextColor())
-                }
-                .onChange(of: selectedItem) {
-                    Task {
-                        if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
-                            selectedImageData = data
-                            if let uiImage = UIImage(data: data),
-                               let color = await extractColor(from: uiImage) {
-                                selectedColor = color
+                    .onChange(of: selectedItem) {
+                        Task {
+                            if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
+                                selectedImageData = data
+                                if let uiImage = UIImage(data: data),
+                                   let color = await extractColor(from: uiImage) {
+                                    selectedColor = color
+                                }
                             }
                         }
                     }
                 }
-                
+
                 Spacer()
-                
-                ColorPicker("", selection: $selectedColor)
-                    .labelsHidden()
+
+                GlassColorChip(selection: $selectedColor)
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+            .padding(.bottom, 8)
         }
     }
     
