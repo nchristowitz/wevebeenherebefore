@@ -109,33 +109,8 @@ struct RememberView: View {
                 // Continue button
                 VStack {
                     Spacer()
-                    HStack {
-                        if #available(iOS 26.0, *) {
-                            Button(action: {
-                                onComplete()
-                            }) {
-                                Text("Continue")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .glassEffect()
-                            }
-                        } else {
-                            Button(action: {
-                                onComplete()
-                            }) {
-                                Text("Continue")
-                                    .font(.headline)
-                                    .foregroundColor(.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(.thickMaterial)
-                                    )
-                            }
-                        }
+                    GlassActionButton(title: "Continue") {
+                        onComplete()
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 20)

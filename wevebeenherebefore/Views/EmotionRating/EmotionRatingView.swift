@@ -44,38 +44,11 @@ struct EmotionRatingView: View {
             }
             .accessibilityLabel("Emotion rating form")
             
-            if #available(iOS 26.0, *) {
-                Button(action: {
-                    onComplete(emotions)
-                }) {
-                    Text("Next")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .glassEffect()
-                }
-                .padding()
-                .accessibilityLabel("Next")
-                .accessibilityHint("Continue to next step with current emotion ratings")
-            } else {
-                Button(action: {
-                    onComplete(emotions)
-                }) {
-                    Text("Next")
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.thickMaterial)
-                        )
-                }
-                .padding()
-                .accessibilityLabel("Next")
-                .accessibilityHint("Continue to next step with current emotion ratings")
+            GlassActionButton(title: "Next") {
+                onComplete(emotions)
             }
+            .padding()
+            .accessibilityHint("Continue to next step with current emotion ratings")
         }
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -116,7 +89,8 @@ struct EmotionRatingRow: View {
                             .frame(width: circleSize, height: circleSize)
                             .onTapGesture {
                                 withAnimation(.spring(response: 0.3)) {
-                                    rating = value
+                                    // Tapping the current rating again clears it
+                                    rating = rating == value ? 0 : value
                                 }
                             }
                     }

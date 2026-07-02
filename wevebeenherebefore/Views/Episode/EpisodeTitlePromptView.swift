@@ -36,9 +36,11 @@ struct EpisodeTitlePromptView: View {
                     },
                     alignment: .topLeading
                 )
-            
-                
-            Spacer()
+
+            GlassActionButton(title: "Done", action: onNext)
+                .disabled(text.isEmpty)
+                .padding(.top, 8)
+                .accessibilityHint("Finish and review your episode")
         }
         .padding()
         .frame(maxHeight: .infinity, alignment: .top)
@@ -52,18 +54,6 @@ struct EpisodeTitlePromptView: View {
         .onDisappear {
             // Ensure keyboard is dismissed properly
             isFocused = false
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button("Done") {
-                        onNext()
-                    }
-                    .disabled(text.isEmpty)
-                    .frame(minWidth: 60)
-                }
-            }
         }
     }
 }

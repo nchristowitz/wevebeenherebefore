@@ -63,30 +63,8 @@ struct CheckInView: View {
         .padding(.horizontal)
     }
 
-    @ViewBuilder
     private var continueButton: some View {
-        if #available(iOS 26.0, *) {
-            Button(action: finishVerdict) {
-                Text("Continue")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .glassEffect()
-            }
-        } else {
-            Button(action: finishVerdict) {
-                Text("Continue")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.thickMaterial)
-                    )
-            }
-        }
+        GlassActionButton(title: "Continue", action: finishVerdict)
     }
 
     private func finishVerdict() {

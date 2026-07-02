@@ -32,6 +32,11 @@ struct DebugView: View {
                         addMockEpisode(hoursAgo: 1)
                     }
                     .foregroundColor(.blue)
+
+                    Button("Add Episode (18 months ago)") {
+                        addMockEpisode(daysAgo: 545)
+                    }
+                    .foregroundColor(.blue)
                 }
                 
                 Section("Check-in Testing") {

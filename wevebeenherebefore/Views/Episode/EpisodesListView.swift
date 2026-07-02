@@ -18,57 +18,66 @@ struct EpisodesListView: View {
         }
     }
 
-    // Group episodes by month and year
-    private var groupedEpisodes: [(key: String, episodes: [Episode])] {
+    // Group episodes by year, then month, so the list can show year dividers
+    private var groupedByYear: [(year: String, months: [(key: String, episodes: [Episode])])] {
         let calendar = Calendar.current
-        let grouped = Dictionary(grouping: episodes) { episode -> String in
-            let components = calendar.dateComponents([.year, .month], from: episode.date)
-            let date = calendar.date(from: components) ?? episode.date
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMMM yyyy"
-            return formatter.string(from: date)
-        }
 
-        // Sort by the most recent date in each group
-        return grouped.map { (key: $0.key, episodes: $0.value) }
-            .sorted { first, second in
-                guard let firstDate = first.episodes.first?.date,
-                      let secondDate = second.episodes.first?.date else {
-                    return false
-                }
-                return firstDate > secondDate
+        let byYear = Dictionary(grouping: episodes) { calendar.component(.year, from: $0.date) }
+
+        return byYear.keys.sorted(by: >).map { year in
+            let byMonth = Dictionary(grouping: byYear[year] ?? []) { calendar.component(.month, from: $0.date) }
+            let months = byMonth.keys.sorted(by: >).map { month in
+                (key: calendar.monthSymbols[month - 1], episodes: byMonth[month] ?? [])
             }
+            return (year: String(year), months: months)
+        }
     }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 List {
-                    ForEach(groupedEpisodes, id: \.key) { group in
-                        Section(header: Text(group.key).font(.headline).textCase(nil)) {
-                            ForEach(group.episodes) { episode in
-                                NavigationLink(value: episode) {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(episode.title)
-                                                .font(.headline)
+                    ForEach(groupedByYear, id: \.year) { yearGroup in
+                        // Year divider splitting the episode history visually
+                        Section {
+                            HStack(spacing: 12) {
+                                Text(yearGroup.year)
+                                    .font(.title2)
+                                    .fontWeight(.bold)
 
-                                            Text(episode.date, format: .dateTime.month().day())
-                                                .font(.subheadline)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        .padding(.vertical, 4)
+                                VStack { Divider() }
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .accessibilityAddTraits(.isHeader)
+                        }
 
-                                        Spacer()
+                        ForEach(yearGroup.months, id: \.key) { group in
+                            Section(header: Text(group.key).font(.headline).textCase(nil)) {
+                                ForEach(group.episodes) { episode in
+                                    NavigationLink(value: episode) {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(episode.title)
+                                                    .font(.headline)
 
-                                        if episode.hasPendingCheckIn {
-                                            NotificationDot()
+                                                Text(episode.date, format: .dateTime.month().day())
+                                                    .font(.subheadline)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                            .padding(.vertical, 4)
+
+                                            Spacer()
+
+                                            if episode.hasPendingCheckIn {
+                                                NotificationDot()
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            .onDelete { offsets in
-                                deleteEpisodesInGroup(group: group.episodes, offsets: offsets)
+                                .onDelete { offsets in
+                                    deleteEpisodesInGroup(group: group.episodes, offsets: offsets)
+                                }
                             }
                         }
                     }
@@ -233,12 +242,20 @@ struct EpisodesListView: View {
         prompts: ["Where was I?": "In the grocery store", "What helped?": "Found a quiet spot and used my breathing technique"]
     )
     episode4.date = Calendar.current.date(byAdding: .month, value: -2, to: Date()) ?? Date()
+
+    let episode5 = Episode(
+        title: "Argument That Lingered",
+        emotions: ["Anger": 6, "Sadness": 4],
+        prompts: ["What happened?": "A disagreement that spiraled", "What helped?": "Time and a long walk"]
+    )
+    episode5.date = Calendar.current.date(byAdding: .year, value: -1, to: Date()) ?? Date()
     
     // Insert episodes into the container
     container.mainContext.insert(episode1)
     container.mainContext.insert(episode2)
     container.mainContext.insert(episode3)
     container.mainContext.insert(episode4)
+    container.mainContext.insert(episode5)
     
     return EpisodesListView()
         .modelContainer(container)

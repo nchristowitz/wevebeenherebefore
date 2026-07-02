@@ -36,26 +36,17 @@ struct EpisodePromptView: View {
                     },
                     alignment: .topLeading
                 )
-                
-            Spacer()
+
+            GlassActionButton(title: prompt.isLast ? "Done" : "Next", action: onNext)
+                .disabled(text.isEmpty)
+                .padding(.top, 8)
+                .accessibilityHint("Continue to the next prompt")
         }
         .padding()
         .frame(maxHeight: .infinity, alignment: .top)
         .navigationBarBackButtonHidden(false)
         .onAppear {
             isFocused = true
-        }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                HStack {
-                    Spacer()
-                    Button(prompt.isLast ? "Done" : "Next") {
-                        onNext()
-                    }
-                    .disabled(text.isEmpty)
-                    .frame(minWidth: 60)
-                }
-            }
         }
     }
 }
