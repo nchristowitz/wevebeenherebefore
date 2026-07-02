@@ -37,6 +37,11 @@ struct DebugView: View {
                         addMockEpisode(daysAgo: 545)
                     }
                     .foregroundColor(.blue)
+
+                    Button("Add Delight with Song") {
+                        addMockSongCard()
+                    }
+                    .foregroundColor(.blue)
                 }
                 
                 Section("Check-in Testing") {
@@ -167,6 +172,30 @@ struct DebugView: View {
         }
     }
     
+    private func addMockSongCard() {
+        let card = Card(
+            text: "This song always brings me back",
+            type: .delight,
+            color: Color(.sRGB, red: 0.35, green: 0.34, blue: 0.84, opacity: 1),
+            song: CardSong(
+                persistentID: "0",
+                storeID: nil,
+                title: "Here Comes the Sun",
+                artist: "The Beatles",
+                artworkData: nil
+            )
+        )
+        modelContext.insert(card)
+
+        do {
+            try modelContext.save()
+            alertMessage = "Added mock delight with song"
+        } catch {
+            alertMessage = "Error saving card: \(error.localizedDescription)"
+        }
+        showingAlert = true
+    }
+
     private func triggerTestNotification(_ checkInType: CheckInType) {
         // Find the most recent episode to use for the test
         let descriptor = FetchDescriptor<Episode>(sortBy: [SortDescriptor(\.createdAt, order: .reverse)])

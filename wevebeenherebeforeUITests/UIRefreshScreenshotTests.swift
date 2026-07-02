@@ -29,6 +29,7 @@ final class UIRefreshScreenshotTests: XCTestCase {
             "Add Episode (2 weeks ago)",
             "Add Episode (3 months ago)",
             "Add Episode (18 months ago)",
+            "Add Delight with Song",
         ] {
             let seedButton = app.buttons[seed]
             XCTAssertTrue(seedButton.waitForExistence(timeout: 5), "Missing debug button: \(seed)")
@@ -50,6 +51,7 @@ final class UIRefreshScreenshotTests: XCTestCase {
         app.buttons["Add Card"].tap()
         app.buttons["Add Delight"].tap()
         XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Add Song"].exists, "Delight editor should offer Add Song")
         Thread.sleep(forTimeInterval: 1) // keyboard settles
         saveShot(app, name: "1b-add-delight-accessories")
         app.buttons["Back"].tap()
@@ -57,6 +59,7 @@ final class UIRefreshScreenshotTests: XCTestCase {
         app.buttons["Add Card"].tap()
         app.buttons["Add Memory"].tap()
         XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["Add Song"].exists, "Memory editor should offer Add Song")
         Thread.sleep(forTimeInterval: 1)
         saveShot(app, name: "1c-add-memory-accessories")
 

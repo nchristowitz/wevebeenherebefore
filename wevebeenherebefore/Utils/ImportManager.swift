@@ -162,7 +162,25 @@ class ImportManager {
                     imageData = Data(base64Encoded: base64)
                 }
 
-                let card = Card(text: text, type: cardType, color: color, date: date, imageData: imageData)
+                // Restore the song attachment if the export included one
+                var song: CardSong?
+                if let songDict = cardDict["song"] as? [String: Any],
+                   let persistentID = songDict["persistentID"] as? String,
+                   let title = songDict["title"] as? String {
+                    var artworkData: Data?
+                    if let artworkBase64 = songDict["artworkData"] as? String {
+                        artworkData = Data(base64Encoded: artworkBase64)
+                    }
+                    song = CardSong(
+                        persistentID: persistentID,
+                        storeID: songDict["storeID"] as? String,
+                        title: title,
+                        artist: songDict["artist"] as? String ?? "",
+                        artworkData: artworkData
+                    )
+                }
+
+                let card = Card(text: text, type: cardType, color: color, date: date, imageData: imageData, song: song)
                 
                 if let createdString = cardDict["createdAt"] as? String,
                    let created = ISO8601DateFormatter().date(from: createdString) {

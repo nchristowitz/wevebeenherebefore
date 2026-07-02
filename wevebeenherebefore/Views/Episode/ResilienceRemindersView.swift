@@ -116,6 +116,12 @@ struct CarouselCardView: View {
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
+                    .overlay(alignment: .bottom) {
+                        if let song = card.song {
+                            CardSongRow(song: song)
+                                .padding(16)
+                        }
+                    }
             } else {
                 // Card with text (and optional image)
                 VStack(alignment: .leading, spacing: 0) {
@@ -145,6 +151,13 @@ struct CarouselCardView: View {
                             .kerning(-0.3)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                             .padding(20)
+                    }
+
+                    if let song = card.song {
+                        CardSongRow(song: song)
+                            .padding(.horizontal, 16)
+                            .padding(.top, card.text.isEmpty ? 16 : 0)
+                            .padding(.bottom, 16)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

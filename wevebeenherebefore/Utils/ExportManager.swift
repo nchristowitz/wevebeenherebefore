@@ -186,6 +186,21 @@ class ExportManager {
             dict["imageData"] = imageData.base64EncodedString()
         }
 
+        if let song = card.song {
+            var songDict: [String: Any] = [
+                "persistentID": song.persistentID,
+                "title": song.title,
+                "artist": song.artist
+            ]
+            if let storeID = song.storeID {
+                songDict["storeID"] = storeID
+            }
+            if let artworkData = song.artworkData {
+                songDict["artworkData"] = artworkData.base64EncodedString()
+            }
+            dict["song"] = songDict
+        }
+
         return dict
     }
     
@@ -260,6 +275,9 @@ class ExportManager {
                         markdown += "**\(displayDateFormatter.string(from: date)):** "
                     }
                     markdown += "\(card.text)\n\n"
+                    if let song = card.song {
+                        markdown += "🎵 \(song.title) — \(song.artist)\n\n"
+                    }
                 }
             }
         }

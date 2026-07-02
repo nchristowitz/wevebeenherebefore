@@ -1,61 +1,93 @@
 import SwiftUI
 import PhotosUI
+import MediaPlayer
 
 struct AddDelightView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var selectedColor: Color
+    @State private var attachedSong: CardSong?
+    @State private var isShowingSongPicker = false
+    @State private var isShowingMusicAccessAlert = false
     let existingCard: Card?
-    
+
     init(existingCard: Card? = nil) {
         self.existingCard = existingCard
         _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
         _selectedImageData = State(initialValue: existingCard?.imageData)
+        _attachedSong = State(initialValue: existingCard?.song)
     }
-    
+
     var body: some View {
         AddCardBaseView(
             type: .delight,
             selectedColor: $selectedColor,
             imageData: selectedImageData,
+            song: attachedSong,
             onRemoveImage: {
                 selectedImageData = nil
                 selectedItem = nil
             },
             existingCard: existingCard
         ) {
-            HStack {
-                GlassAccessoryChip {
-                    PhotosPicker(
-                        selection: $selectedItem,
-                        matching: .images,
-                        photoLibrary: .shared()
-                    ) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "photo")
-                            Text("Add Photo")
+            VStack(spacing: 12) {
+                if let song = attachedSong {
+                    CardSongRow(song: song, onRemove: {
+                        attachedSong = nil
+                    })
+                }
+
+                HStack {
+                    GlassAccessoryChip {
+                        PhotosPicker(
+                            selection: $selectedItem,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "photo")
+                                Text("Add Photo")
+                            }
+                            .foregroundColor(selectedColor.contrastingTextColor())
                         }
-                        .foregroundColor(selectedColor.contrastingTextColor())
-                    }
-                    .onChange(of: selectedItem) {
-                        Task {
-                            if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
-                                selectedImageData = data
-                                if let uiImage = UIImage(data: data),
-                                   let color = await extractColor(from: uiImage) {
-                                    selectedColor = color
+                        .onChange(of: selectedItem) {
+                            Task {
+                                if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
+                                    selectedImageData = data
+                                    if let uiImage = UIImage(data: data),
+                                       let color = await extractColor(from: uiImage) {
+                                        selectedColor = color
+                                    }
                                 }
                             }
                         }
                     }
+
+                    if attachedSong == nil {
+                        AddSongChip(
+                            textColor: selectedColor.contrastingTextColor(),
+                            isShowingPicker: $isShowingSongPicker,
+                            isShowingAccessAlert: $isShowingMusicAccessAlert
+                        )
+                    }
+
+                    Spacer()
+
+                    GlassColorChip(selection: $selectedColor)
                 }
-
-                Spacer()
-
-                GlassColorChip(selection: $selectedColor)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
+        }
+        .sheet(isPresented: $isShowingSongPicker) {
+            SongPicker { song in
+                attachedSong = song
+            }
+        }
+        .alert("No Access to Apple Music", isPresented: $isShowingMusicAccessAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Allow access to your media library in Settings to attach songs.")
         }
     }
     
