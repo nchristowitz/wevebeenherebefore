@@ -35,12 +35,49 @@ struct GlassActionButton: View {
     }
 }
 
+// Floating glass chip for the input accessories on the card editors
+// (photo picker, date picker, color well). Same iOS 26 / fallback split
+// as GlassActionButton, sized for compact controls.
+struct GlassAccessoryChip<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        if #available(iOS 26.0, *) {
+            padded
+                .glassEffect()
+        } else {
+            padded
+                .background(Capsule().fill(.thickMaterial))
+        }
+    }
+
+    private var padded: some View {
+        content
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+    }
+}
+
 #Preview {
     VStack(spacing: 20) {
         GlassActionButton(title: "Next") {}
 
         GlassActionButton(title: "Done") {}
             .disabled(true)
+
+        HStack {
+            GlassAccessoryChip {
+                Label("Add Photo", systemImage: "photo")
+            }
+
+            Spacer()
+
+            GlassAccessoryChip {
+                ColorPicker("", selection: .constant(.orange))
+                    .labelsHidden()
+            }
+        }
     }
     .padding()
+    .background(Color(uiColor: .systemGray6))
 }

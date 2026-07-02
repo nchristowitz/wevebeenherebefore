@@ -17,12 +17,14 @@ struct AddTechniqueView: View {
         ) {
             HStack {
                 Spacer()
-                ColorPicker("", selection: $selectedColor)
-                    .labelsHidden()
+
+                GlassAccessoryChip {
+                    ColorPicker("", selection: $selectedColor)
+                        .labelsHidden()
+                }
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+            .padding(.bottom, 8)
         }
     }
 }

@@ -46,6 +46,21 @@ final class UIRefreshScreenshotTests: XCTestCase {
         XCTAssertTrue(checkInCard.waitForExistence(timeout: 5))
         saveShot(app, name: "1-resilience-checkin-cards")
 
+        // ---- Card editors: floating glass accessory chips ----
+        app.buttons["Add Card"].tap()
+        app.buttons["Add Delight"].tap()
+        XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 1) // keyboard settles
+        saveShot(app, name: "1b-add-delight-accessories")
+        app.buttons["Back"].tap()
+
+        app.buttons["Add Card"].tap()
+        app.buttons["Add Memory"].tap()
+        XCTAssertTrue(app.textViews.firstMatch.waitForExistence(timeout: 5))
+        Thread.sleep(forTimeInterval: 1)
+        saveShot(app, name: "1c-add-memory-accessories")
+        app.buttons["Back"].tap()
+
         // ---- Episodes tab: year dividers ----
         app.tabBars.buttons["Episodes"].tap()
         let olderYearDivider = app.staticTexts["2025"]

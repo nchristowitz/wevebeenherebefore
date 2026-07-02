@@ -22,22 +22,25 @@ struct AddMemoryView: View {
             initialText: initialText
         ) {
             HStack {
-                DatePicker(
-                    "",
-                    selection: $selectedDate,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
-                .labelsHidden()
+                GlassAccessoryChip {
+                    DatePicker(
+                        "",
+                        selection: $selectedDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                }
 
                 Spacer()
 
-                ColorPicker("", selection: $selectedColor)
-                    .labelsHidden()
+                GlassAccessoryChip {
+                    ColorPicker("", selection: $selectedColor)
+                        .labelsHidden()
+                }
             }
             .padding(.horizontal)
-            .padding(.vertical, 8)
-            .background(.ultraThinMaterial)
+            .padding(.bottom, 8)
         }
     }
 }
