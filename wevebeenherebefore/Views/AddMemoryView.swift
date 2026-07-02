@@ -22,7 +22,16 @@ struct AddMemoryView: View {
             initialText: initialText
         ) {
             HStack {
-                GlassAccessoryChip {
+                // Native-style date capsule at the shared accessory height.
+                // The compact picker has no size API, so an invisible one
+                // sits on top as the tap target and calendar popover.
+                ZStack {
+                    Text(selectedDate, format: .dateTime.day().month().year())
+                        .padding(.horizontal, 16)
+                        .frame(height: accessoryControlHeight)
+                        .background(Capsule().fill(Color(uiColor: .tertiarySystemFill)))
+                        .accessibilityHidden(true)
+
                     DatePicker(
                         "",
                         selection: $selectedDate,
@@ -30,14 +39,14 @@ struct AddMemoryView: View {
                     )
                     .datePickerStyle(.compact)
                     .labelsHidden()
+                    // Low but above the ~1% hit-testing cutoff; visually
+                    // disappears into the styled capsule behind it
+                    .opacity(0.05)
                 }
 
                 Spacer()
 
-                GlassAccessoryChip {
-                    ColorPicker("", selection: $selectedColor)
-                        .labelsHidden()
-                }
+                GlassColorChip(selection: $selectedColor)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)

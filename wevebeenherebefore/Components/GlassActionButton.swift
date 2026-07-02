@@ -36,9 +36,12 @@ struct GlassActionButton: View {
 }
 
 // Floating glass chip for the input accessories on the card editors
-// (photo picker, date picker, color well). Same iOS 26 / fallback split
-// as GlassActionButton, sized for compact controls.
+// (photo picker, color well). Same iOS 26 / fallback split as
+// GlassActionButton. All accessory controls share a 44pt height.
+let accessoryControlHeight: CGFloat = 44
+
 struct GlassAccessoryChip<Content: View>: View {
+    var horizontalPadding: CGFloat = 14
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -53,8 +56,23 @@ struct GlassAccessoryChip<Content: View>: View {
 
     private var padded: some View {
         content
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, horizontalPadding)
+            .frame(minHeight: accessoryControlHeight)
+    }
+}
+
+// The system color well in a circular glass chip. ColorPicker has no
+// size API, so scale it up to fill the chip height.
+struct GlassColorChip: View {
+    @Binding var selection: Color
+
+    var body: some View {
+        GlassAccessoryChip(horizontalPadding: 3) {
+            ColorPicker("", selection: $selection)
+                .labelsHidden()
+                .scaleEffect(1.35)
+                .frame(width: 38, height: 38)
+        }
     }
 }
 
@@ -72,10 +90,7 @@ struct GlassAccessoryChip<Content: View>: View {
 
             Spacer()
 
-            GlassAccessoryChip {
-                ColorPicker("", selection: .constant(.orange))
-                    .labelsHidden()
-            }
+            GlassColorChip(selection: .constant(.orange))
         }
     }
     .padding()

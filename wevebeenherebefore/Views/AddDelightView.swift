@@ -52,10 +52,7 @@ struct AddDelightView: View {
 
                 Spacer()
 
-                GlassAccessoryChip {
-                    ColorPicker("", selection: $selectedColor)
-                        .labelsHidden()
-                }
+                GlassColorChip(selection: $selectedColor)
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
