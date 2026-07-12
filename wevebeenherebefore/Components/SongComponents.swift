@@ -149,15 +149,18 @@ struct CardSongRow: View {
                     }
                 }
 
+                Spacer(minLength: 8)
+
                 Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .padding(.leading, 2)
+                    .padding(.trailing, 2)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
             .foregroundColor(.primary)
-            .background(.regularMaterial, in: Capsule())
-            .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 2)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+            .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 1)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(isPlaying ? "Pause \(song.title)" : "Play \(song.title)")

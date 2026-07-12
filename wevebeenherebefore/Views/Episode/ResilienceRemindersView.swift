@@ -107,13 +107,12 @@ struct CarouselCardView: View {
         card.imageData != nil && card.text.isEmpty
     }
 
-    // Floating play/pause capsule shown bottom-center on the card's image
+    // Floating play/pause panel inset over the bottom of the card's image
     @ViewBuilder
     private var songPillOverlay: some View {
         if let song = card.song {
             CardSongRow(song: song, style: .floating)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 16)
+                .padding(8)
         }
     }
 
