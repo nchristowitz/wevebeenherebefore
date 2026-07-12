@@ -353,7 +353,21 @@ struct ResilienceView: View {
 
 struct CardView: View {
     let card: Card
-    
+
+    // Floating play/pause panel inset over the bottom of the card's image,
+    // its corners concentric with the image's
+    @ViewBuilder
+    private func songPillOverlay(imageCornerRadius: CGFloat) -> some View {
+        if let song = card.song {
+            CardSongRow(
+                song: song,
+                style: .floating,
+                floatingCornerRadius: max(imageCornerRadius - 8, 4)
+            )
+            .padding(8)
+        }
+    }
+
     private var accessibilityLabel: String {
         var components: [String] = []
         
@@ -400,6 +414,7 @@ struct CardView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 16) }
                         .accessibilityLabel("Card image")
                         .accessibilityHint("Resilience card image for \(card.type.rawValue)")
                 } else {
@@ -408,23 +423,25 @@ struct CardView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                        .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 8) }
                         .padding(.horizontal)
                         .padding(.top)
                         .accessibilityLabel("Card image")
                         .accessibilityHint("Supporting image for this \(card.type.rawValue)")
                 }
             }
-            
+
             if !card.text.isEmpty {
                 Text(card.text)
-                    .font(.system(size: 32, weight: .regular, design: .default))
+                    // Photos take the lead on mixed cards; text drops to a caption size
+                    .font(.system(size: card.imageData == nil ? 32 : 21, weight: .regular, design: .default))
                     .padding(20)
                     .kerning(-0.3)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityLabel(card.text)
             }
 
-            if let song = card.song {
+            if let song = card.song, card.imageData == nil {
                 CardSongRow(song: song)
                     .padding(.horizontal, 16)
                     .padding(.top, card.text.isEmpty ? 16 : 0)

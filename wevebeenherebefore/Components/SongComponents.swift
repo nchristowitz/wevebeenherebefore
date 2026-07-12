@@ -95,11 +95,23 @@ struct AddSongChip: View {
     }
 }
 
-// Song attachment row shown on cards and in the editors — artwork,
-// title/artist and a play/pause button, in the spirit of an iMessage
-// song preview. Sits on a material so it reads on any card color.
+// Song attachment shown on cards and in the editors — artwork,
+// title/artist and play/pause, in the spirit of an iMessage song
+// preview. Two styles: .row is the full-width attachment row used in
+// editors and on image-less cards; .floating is a content-hugging
+// capsule overlaid bottom-center on card imagery, where the whole
+// pill is the play/pause target.
 struct CardSongRow: View {
+    enum Style {
+        case row
+        case floating
+    }
+
     let song: CardSong
+    var style: Style = .row
+    // Kept concentric with the image the panel floats on:
+    // image corner radius minus the 8pt inset
+    var floatingCornerRadius: CGFloat = 6
     var onRemove: (() -> Void)? = nil
 
     @ObservedObject private var playback = SongPlaybackManager.shared
@@ -109,6 +121,55 @@ struct CardSongRow: View {
     }
 
     var body: some View {
+        switch style {
+        case .row:
+            rowBody
+        case .floating:
+            floatingBody
+        }
+    }
+
+    private var floatingBody: some View {
+        Button {
+            playback.toggle(song)
+        } label: {
+            HStack(spacing: 10) {
+                artwork
+                    .frame(width: 36, height: 36)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(song.title)
+                        .font(.footnote)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+
+                    if !song.artist.isEmpty {
+                        Text(song.artist)
+                            .font(.caption2)
+                            .opacity(0.7)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 16, weight: .semibold))
+                    .padding(.trailing, 2)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .foregroundColor(.primary)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: floatingCornerRadius))
+            .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 1)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isPlaying ? "Pause \(song.title)" : "Play \(song.title)")
+    }
+
+    private var rowBody: some View {
         HStack(spacing: 12) {
             artwork
                 .frame(width: 44, height: 44)
@@ -193,6 +254,17 @@ struct CardSongRow: View {
                 artworkData: nil
             ),
             onRemove: {}
+        )
+
+        CardSongRow(
+            song: CardSong(
+                persistentID: "3",
+                storeID: nil,
+                title: "Here Comes the Sun",
+                artist: "The Beatles",
+                artworkData: nil
+            ),
+            style: .floating
         )
     }
     .padding(20)
