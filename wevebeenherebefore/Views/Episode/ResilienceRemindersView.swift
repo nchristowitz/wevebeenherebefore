@@ -107,6 +107,16 @@ struct CarouselCardView: View {
         card.imageData != nil && card.text.isEmpty
     }
 
+    // Floating play/pause capsule shown bottom-center on the card's image
+    @ViewBuilder
+    private var songPillOverlay: some View {
+        if let song = card.song {
+            CardSongRow(song: song, style: .floating)
+                .padding(.horizontal, 12)
+                .padding(.bottom, 16)
+        }
+    }
+
     var body: some View {
         Group {
             if isImageOnly, let imageData = card.imageData, let uiImage = UIImage(data: imageData) {
@@ -116,12 +126,7 @@ struct CarouselCardView: View {
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottom) {
-                        if let song = card.song {
-                            CardSongRow(song: song)
-                                .padding(16)
-                        }
-                    }
+                    .overlay(alignment: .bottom) { songPillOverlay }
             } else {
                 // Card with text (and optional image)
                 VStack(alignment: .leading, spacing: 0) {
@@ -141,19 +146,21 @@ struct CarouselCardView: View {
                             .scaledToFit()
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(alignment: .bottom) { songPillOverlay }
                             .padding(.horizontal, 20)
                             .padding(.top, card.type == .memory ? 12 : 20)
                     }
 
                     if !card.text.isEmpty {
                         Text(card.text)
-                            .font(.system(size: 28, weight: .regular, design: .default))
+                            // Photos take the lead on mixed cards; text drops to a caption size
+                            .font(.system(size: card.imageData == nil ? 28 : 19, weight: .regular, design: .default))
                             .kerning(-0.3)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                             .padding(20)
                     }
 
-                    if let song = card.song {
+                    if let song = card.song, card.imageData == nil {
                         CardSongRow(song: song)
                             .padding(.horizontal, 16)
                             .padding(.top, card.text.isEmpty ? 16 : 0)

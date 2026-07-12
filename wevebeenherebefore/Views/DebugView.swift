@@ -173,7 +173,7 @@ struct DebugView: View {
     }
     
     private func addMockSongCard() {
-        let card = Card(
+        let textCard = Card(
             text: "This song always brings me back",
             type: .delight,
             color: Color(.sRGB, red: 0.35, green: 0.34, blue: 0.84, opacity: 1),
@@ -185,15 +185,57 @@ struct DebugView: View {
                 artworkData: nil
             )
         )
-        modelContext.insert(card)
+        modelContext.insert(textCard)
+
+        // Image + text + song card to exercise the caption-size text and
+        // the floating song pill over the photo
+        let imageCard = Card(
+            text: "Golden hour on the canal",
+            type: .delight,
+            color: Color(.sRGB, red: 0.85, green: 0.45, blue: 0.3, opacity: 1),
+            imageData: mockSunsetImageData(),
+            song: CardSong(
+                persistentID: "0",
+                storeID: nil,
+                title: "Weightless",
+                artist: "Marconi Union",
+                artworkData: nil
+            )
+        )
+        modelContext.insert(imageCard)
 
         do {
             try modelContext.save()
-            alertMessage = "Added mock delight with song"
+            alertMessage = "Added mock delights with songs"
         } catch {
             alertMessage = "Error saving card: \(error.localizedDescription)"
         }
         showingAlert = true
+    }
+
+    // A stand-in "photo" so simulator screenshots can exercise imagery
+    private func mockSunsetImageData() -> Data? {
+        let size = CGSize(width: 900, height: 560)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            let colors = [
+                UIColor(red: 0.99, green: 0.80, blue: 0.40, alpha: 1).cgColor,
+                UIColor(red: 0.90, green: 0.42, blue: 0.36, alpha: 1).cgColor,
+                UIColor(red: 0.33, green: 0.24, blue: 0.50, alpha: 1).cgColor
+            ]
+            guard let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors as CFArray,
+                locations: [0, 0.55, 1]
+            ) else { return }
+            context.cgContext.drawLinearGradient(
+                gradient,
+                start: .zero,
+                end: CGPoint(x: 0, y: size.height),
+                options: []
+            )
+        }
+        return image.jpegData(compressionQuality: 0.9)
     }
 
     private func triggerTestNotification(_ checkInType: CheckInType) {

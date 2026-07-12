@@ -47,6 +47,11 @@ final class UIRefreshScreenshotTests: XCTestCase {
         XCTAssertTrue(checkInCard.waitForExistence(timeout: 5))
         saveShot(app, name: "1-resilience-checkin-cards")
 
+        // Song cards (text+song row, image+text+song pill) sit below the fold
+        app.swipeUp()
+        Thread.sleep(forTimeInterval: 0.8)
+        saveShot(app, name: "1a-resilience-song-cards")
+
         // ---- Card editors: floating glass accessory chips ----
         app.buttons["Add Card"].tap()
         app.buttons["Add Delight"].tap()
