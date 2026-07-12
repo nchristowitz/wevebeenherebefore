@@ -354,12 +354,17 @@ struct ResilienceView: View {
 struct CardView: View {
     let card: Card
 
-    // Floating play/pause panel inset over the bottom of the card's image
+    // Floating play/pause panel inset over the bottom of the card's image,
+    // its corners concentric with the image's
     @ViewBuilder
-    private var songPillOverlay: some View {
+    private func songPillOverlay(imageCornerRadius: CGFloat) -> some View {
         if let song = card.song {
-            CardSongRow(song: song, style: .floating)
-                .padding(8)
+            CardSongRow(
+                song: song,
+                style: .floating,
+                floatingCornerRadius: max(imageCornerRadius - 8, 4)
+            )
+            .padding(8)
         }
     }
 
@@ -409,7 +414,7 @@ struct CardView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(alignment: .bottom) { songPillOverlay }
+                        .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 16) }
                         .accessibilityLabel("Card image")
                         .accessibilityHint("Resilience card image for \(card.type.rawValue)")
                 } else {
@@ -418,7 +423,7 @@ struct CardView: View {
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(alignment: .bottom) { songPillOverlay }
+                        .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 8) }
                         .padding(.horizontal)
                         .padding(.top)
                         .accessibilityLabel("Card image")

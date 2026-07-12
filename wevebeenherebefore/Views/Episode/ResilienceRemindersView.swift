@@ -107,12 +107,17 @@ struct CarouselCardView: View {
         card.imageData != nil && card.text.isEmpty
     }
 
-    // Floating play/pause panel inset over the bottom of the card's image
+    // Floating play/pause panel inset over the bottom of the card's image,
+    // its corners concentric with the image's
     @ViewBuilder
-    private var songPillOverlay: some View {
+    private func songPillOverlay(imageCornerRadius: CGFloat) -> some View {
         if let song = card.song {
-            CardSongRow(song: song, style: .floating)
-                .padding(8)
+            CardSongRow(
+                song: song,
+                style: .floating,
+                floatingCornerRadius: max(imageCornerRadius - 8, 4)
+            )
+            .padding(8)
         }
     }
 
@@ -125,7 +130,8 @@ struct CarouselCardView: View {
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
-                    .overlay(alignment: .bottom) { songPillOverlay }
+                    // Full-bleed image is clipped by the card's 20pt corners
+                    .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 20) }
             } else {
                 // Card with text (and optional image)
                 VStack(alignment: .leading, spacing: 0) {
@@ -145,7 +151,7 @@ struct CarouselCardView: View {
                             .scaledToFit()
                             .frame(maxWidth: .infinity)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(alignment: .bottom) { songPillOverlay }
+                            .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 12) }
                             .padding(.horizontal, 20)
                             .padding(.top, card.type == .memory ? 12 : 20)
                     }

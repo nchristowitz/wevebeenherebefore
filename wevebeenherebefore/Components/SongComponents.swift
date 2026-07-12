@@ -109,6 +109,9 @@ struct CardSongRow: View {
 
     let song: CardSong
     var style: Style = .row
+    // Kept concentric with the image the panel floats on:
+    // image corner radius minus the 8pt inset
+    var floatingCornerRadius: CGFloat = 6
     var onRemove: (() -> Void)? = nil
 
     @ObservedObject private var playback = SongPlaybackManager.shared
@@ -159,7 +162,7 @@ struct CardSongRow: View {
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity)
             .foregroundColor(.primary)
-            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 10))
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: floatingCornerRadius))
             .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 1)
         }
         .buttonStyle(.plain)
