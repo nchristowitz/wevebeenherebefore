@@ -1,6 +1,8 @@
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
+    @Environment(\.modelContext) private var modelContext
     @State private var isShowingExport = false
     @State private var isShowingImport = false
     @State private var isShowingDebug = false
@@ -34,6 +36,12 @@ struct SettingsView: View {
                     Text("Notifications")
                 } footer: {
                     Text("Check-in reminders will be sent at this time.")
+                }
+                // Move reminders that are already scheduled to the new time
+                .onChange(of: notificationHour * 60 + notificationMinute) {
+                    Task {
+                        await NotificationManager.shared.rescheduleForNewReminderTime(modelContext: modelContext)
+                    }
                 }
 
                 Section {

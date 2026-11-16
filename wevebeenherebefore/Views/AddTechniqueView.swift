@@ -6,7 +6,7 @@ struct AddTechniqueView: View {
     
     init(existingCard: Card? = nil) {
         self.existingCard = existingCard
-        _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
+        _selectedColor = State(initialValue: existingCard?.color ?? Card.defaultColor)
     }
     
     var body: some View {

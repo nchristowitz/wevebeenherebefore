@@ -46,97 +46,95 @@ struct RememberView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                if rememberItems.isEmpty {
-                    // Empty state - shouldn't normally be shown since coordinator skips this
-                    VStack(spacing: 16) {
-                        Image(systemName: "heart.circle")
-                            .font(.system(size: 60))
-                            .foregroundColor(.secondary)
+        ZStack {
+            if rememberItems.isEmpty {
+                // Empty state - shouldn't normally be shown since coordinator skips this
+                VStack(spacing: 16) {
+                    Image(systemName: "heart.circle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.secondary)
 
-                        Text("Your journey starts here")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                    Text("Your journey starts here")
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-                        Text("As you reflect on past episodes, their summaries will appear here.")
+                    Text("As you reflect on past episodes, their summaries will appear here.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("We've Been Here Before, Remember?")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        Text("You've navigated difficult moments before.")
                             .font(.body)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
                     }
-                } else {
-                    VStack(spacing: 0) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("We've Been Here Before, Remember?")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
 
-                            Text("You've navigated difficult moments before.")
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-
-                        // Carousel
-                        TabView(selection: $currentIndex) {
-                            ForEach(Array(shuffledItems.enumerated()), id: \.element.id) { index, item in
-                                Group {
-                                    switch item {
-                                    case .summary(let episode):
-                                        EpisodeSummaryCard(episode: episode)
-                                    case .predictionReality(let pair):
-                                        PredictionRealityCard(pair: pair)
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                    }
+                    // Carousel
+                    TabView(selection: $currentIndex) {
+                        ForEach(Array(shuffledItems.enumerated()), id: \.element.id) { index, item in
+                            Group {
+                                switch item {
+                                case .summary(let episode):
+                                    EpisodeSummaryCard(episode: episode)
+                                case .predictionReality(let pair):
+                                    PredictionRealityCard(pair: pair)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
                                 }
-                                .tag(index)
                             }
+                            .tag(index)
                         }
-                        .tabViewStyle(.page(indexDisplayMode: .automatic))
-
-                        // Spacer for continue button
-                        Color.clear.frame(height: 80)
                     }
-                }
+                    .tabViewStyle(.page(indexDisplayMode: .automatic))
 
-                // Continue button
-                VStack {
-                    Spacer()
-                    GlassActionButton(title: "Continue") {
-                        onComplete()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    // Spacer for continue button
+                    Color.clear.frame(height: 80)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("")
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        onComplete()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.primary)
-                    }
+
+            // Continue button
+            VStack {
+                Spacer()
+                GlassActionButton(title: "Continue") {
+                    onComplete()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    onComplete()
+                } label: {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
                 }
             }
-            .opacity(opacity)
-            .onAppear {
-                if shuffledItems.isEmpty {
-                    shuffledItems = rememberItems.shuffled()
-                }
-                withAnimation(.easeIn(duration: 0.5)) {
-                    opacity = 1.0
-                }
+        }
+        .opacity(opacity)
+        .onAppear {
+            if shuffledItems.isEmpty {
+                shuffledItems = rememberItems.shuffled()
+            }
+            withAnimation(.easeIn(duration: 0.5)) {
+                opacity = 1.0
             }
         }
     }

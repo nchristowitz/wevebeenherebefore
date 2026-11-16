@@ -14,7 +14,7 @@ struct ExportView: View {
     @State private var showingShareSheet = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {

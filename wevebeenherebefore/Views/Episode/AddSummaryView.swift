@@ -9,6 +9,7 @@ struct AddSummaryView: View {
     let episode: Episode
 
     @State private var summaryText: String = ""
+    @State private var saveError: String?
 
     init(episode: Episode) {
         self.episode = episode
@@ -20,7 +21,7 @@ struct AddSummaryView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 0) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(isEditing ? "Edit summary" : "Add summary")
@@ -72,6 +73,7 @@ struct AddSummaryView: View {
         .onAppear {
             isFocused = true
         }
+        .saveErrorAlert($saveError)
     }
 
     private func saveSummary() {
@@ -87,8 +89,10 @@ struct AddSummaryView: View {
             try modelContext.save()
             dismiss()
         } catch {
+            // Undo the unsaved change; the editor stays open with the text
             print("Error saving summary: \(error)")
-            dismiss()
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
         }
     }
 }

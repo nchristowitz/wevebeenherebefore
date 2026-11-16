@@ -54,6 +54,14 @@ class EpisodeFlowState: ObservableObject {
         }
     }
     
+    // Step back from the review screen to the title prompt. Answers live
+    // in `responses`, so every prompt keeps what was written.
+    func returnToLastPrompt() {
+        if let lastPrompt = EpisodePrompt.prompts.last {
+            currentStep = .prompt(lastPrompt)
+        }
+    }
+
     var shouldShowCloseButton: Bool {
         if case .summary = currentStep {
             return false
@@ -73,6 +81,7 @@ struct EpisodeFlowCoordinator: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var state = EpisodeFlowState()
     @State private var savedEpisode: Episode?
+    @State private var saveError: String?
     @Query private var allEpisodes: [Episode]
 
     // Whether the remember step has anything to show: a past episode with a
@@ -123,9 +132,13 @@ struct EpisodeFlowCoordinator: View {
                     EpisodeSummaryView(
                         emotions: state.emotions,
                         prompts: state.responses,
-                        title: state.responses["Let's give this episode a title"] ?? "",
+                        title: state.responses[EpisodePrompt.titleQuestion] ?? "",
+                        onBack: {
+                            state.returnToLastPrompt()
+                        },
                         onSave: {
-                            let episode = saveEpisode()
+                            // On failure an alert shows and the review stays put
+                            guard let episode = saveEpisode() else { return }
                             savedEpisode = episode
                             // Skip remember step if no summarized episodes exist
                             if hasRememberContent {
@@ -170,10 +183,13 @@ struct EpisodeFlowCoordinator: View {
         } message: {
             Text("You'll lose any progress if you exit now.")
         }
+        .saveErrorAlert($saveError)
     }
     
-    private func saveEpisode() -> Episode {
-        let title = state.responses[EpisodePrompt.prompts.last?.question ?? ""] ?? ""
+    // Returns nil if the save failed; the alert explains and the answers
+    // stay in `state`, so Save can simply be tapped again
+    private func saveEpisode() -> Episode? {
+        let title = state.responses[EpisodePrompt.titleQuestion] ?? ""
         let episode = Episode(
             title: title,
             emotions: state.emotions,
@@ -187,6 +203,10 @@ struct EpisodeFlowCoordinator: View {
             try modelContext.save()
         } catch {
             print("❌ Error saving episode: \(error)")
+            // Drop the unsaved insert so a retry doesn't create a second copy
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
+            return nil
         }
 
         // Enhanced notification scheduling with better error handling

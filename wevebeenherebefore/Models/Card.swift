@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import ImageIO
 
 enum CardType: String, Codable {
     case memory
@@ -58,18 +59,51 @@ final class Card {
         }
     }
     
-    // Remove @Attribute and make it computed without storage
+    // Computed from the stored RGB values
     var color: Color {
         get {
             Color(.sRGB, red: colorRed, green: colorGreen, blue: colorBlue, opacity: 1)
         }
         set {
-            if let components = UIColor(newValue).cgColor.components {
-                colorRed = Double(components[0])
-                colorGreen = Double(components[1])
-                colorBlue = Double(components[2])
-            }
+            let rgb = newValue.sRGBComponents
+            colorRed = rgb.red
+            colorGreen = rgb.green
+            colorBlue = rgb.blue
         }
+    }
+
+    // Color for new cards: the light-mode value of systemGray6. Fixed rather
+    // than the adaptive system color, which would be stored as near-black
+    // if a card were created in Dark Mode. Dark Mode shows its dark version.
+    static let defaultColor = Color(uiColor: UIColor.systemGray6.resolvedColor(
+        with: UITraitCollection(userInterfaceStyle: .light)
+    ))
+
+    // Longest edge, in pixels, for stored card photos — sharp on any
+    // iPhone screen while keeping the database and backups small
+    static let maxImagePixelSize = 2048
+
+    // Re-encode a photo as a JPEG no larger than maxImagePixelSize, keeping
+    // its orientation. Returns nil when the photo is already small enough
+    // or can't be read, so callers keep the original.
+    static func downscaledImageData(_ data: Data) -> Data? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int,
+              max(width, height) > maxImagePixelSize else {
+            return nil
+        }
+
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: maxImagePixelSize
+        ]
+        guard let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        return UIImage(cgImage: image).jpegData(compressionQuality: 0.85)
     }
     
     init(text: String, type: CardType, color: Color, date: Date? = nil, imageData: Data? = nil, song: CardSong? = nil) {

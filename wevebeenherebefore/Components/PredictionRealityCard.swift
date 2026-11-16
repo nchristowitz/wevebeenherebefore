@@ -7,6 +7,19 @@ import SwiftData
 struct PredictionRealityCard: View {
     let pair: PredictionRealityPair
     var showsEpisodeHeader: Bool = true
+    // When true the prediction starts blurred and sharpens into view —
+    // the reveal after a check-in, where it was hidden while writing
+    var revealsPrediction: Bool = false
+
+    // Blur that makes a prediction unreadable. Shared with CheckInView,
+    // which shows the prediction sealed at this blur while the user writes.
+    static let sealedBlurRadius: CGFloat = 8
+
+    @State private var isPredictionRevealed = false
+
+    private var predictionBlurRadius: CGFloat {
+        revealsPrediction && !isPredictionRevealed ? Self.sealedBlurRadius : 0
+    }
 
     private var realityLabel: String {
         switch pair.checkInType {
@@ -57,6 +70,7 @@ struct PredictionRealityCard: View {
 
                     Text(pair.prediction)
                         .font(.body)
+                        .blur(radius: predictionBlurRadius)
                 }
 
                 Divider()
@@ -77,6 +91,13 @@ struct PredictionRealityCard: View {
         .padding(20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .onAppear {
+            guard revealsPrediction else { return }
+            // A short beat first, so the sealed state registers before it lifts
+            withAnimation(.easeOut(duration: 1.0).delay(0.6)) {
+                isPredictionRevealed = true
+            }
+        }
     }
 }
 

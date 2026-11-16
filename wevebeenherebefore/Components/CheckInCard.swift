@@ -27,9 +27,11 @@ struct CheckInCard: View {
         return "\(checkInType.displayName) for episode \(episode.title), \(timeRemainingText)"
     }
 
-    // One hue per time horizon, styled like the resilience cards below them.
-    // Fixed RGB (not adaptive system colors) so the contrasting text color
-    // stays the same in light and dark mode, matching how Card colors work.
+    @Environment(\.colorScheme) private var colorScheme
+
+    // One hue per time horizon, styled like the resilience cards. Fixed RGB
+    // treated exactly like a card's chosen color: as-is in light mode, its
+    // dark version (Color.darkCardVariant) in Dark Mode.
     private var accentColor: Color {
         switch checkInType {
         case .twentyFourHour: return Color(red: 1.0, green: 0.58, blue: 0.0)   // orange
@@ -66,9 +68,9 @@ struct CheckInCard: View {
             }
         }
         .padding(20)
-        .background(accentColor)
+        .background(accentColor.cardColor(for: colorScheme))
         .cornerRadius(20)
-        .foregroundColor(accentColor.contrastingTextColor())
+        .foregroundColor(accentColor.cardTextColor(for: colorScheme))
         .contentShape(Rectangle())
         .onTapGesture {
             onTap()

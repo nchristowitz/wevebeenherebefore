@@ -13,7 +13,9 @@ struct CheckInView: View {
     
     @State private var checkInText: String = ""
     @State private var isOriginalResponseExpanded: Bool = false
+    @State private var isPredictionUnsealed: Bool = false
     @State private var verdictPair: PredictionRealityPair?
+    @State private var saveError: String?
 
     init(episode: Episode, checkInType: CheckInType, existingCheckIn: CheckIn? = nil, onCompletion: (() -> Void)? = nil) {
         self.episode = episode
@@ -24,7 +26,7 @@ struct CheckInView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             if let pair = verdictPair {
                 verdictView(for: pair)
             } else {
@@ -34,6 +36,7 @@ struct CheckInView: View {
         .onAppear {
             isFocused = true
         }
+        .saveErrorAlert($saveError)
     }
 
     // The "we've been here before" proof moment shown right after saving:
@@ -53,7 +56,8 @@ struct CheckInView: View {
             .padding(.top, 40)
             .padding(.bottom, 8)
 
-            PredictionRealityCard(pair: pair)
+            // Skip the reveal animation if the user already peeked
+            PredictionRealityCard(pair: pair, revealsPrediction: !isPredictionUnsealed)
                 .padding(.vertical, 8)
 
             continueButton
@@ -81,9 +85,13 @@ struct CheckInView: View {
                         .padding(.leading, 5)
                         .padding(.top)
                 }
-                
-              
-                
+
+                if let prediction = episode.prediction(for: checkInType) {
+                    predictionView(prediction)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
+                }
+
                 TextEditor(text: $checkInText)
                     .focused($isFocused)
                     .scrollContentBackground(.hidden)
@@ -102,35 +110,6 @@ struct CheckInView: View {
                         },
                         alignment: .topLeading
                     )
-                
-                // Show original response if available
-                if let originalResponse = episode.prediction(for: checkInType) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Your original response:")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
-                        
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                isOriginalResponseExpanded.toggle()
-                            }
-                        }) {
-                            Text(originalResponse)
-                                .font(.caption)
-                                .fontWeight(.regular)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.leading)
-                                .lineLimit(isOriginalResponseExpanded ? nil : 3)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    .padding()
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                }
-                
-                Spacer()
             }
             .padding(.horizontal)
             .navigationBarTitleDisplayMode(.inline)
@@ -150,6 +129,49 @@ struct CheckInView: View {
                     .disabled(checkInText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
+    }
+
+    // The prediction made at episode time. For a new check-in it starts
+    // sealed — blurred and unreadable — so how the user feels now isn't
+    // anchored to what they expected; saving reveals it on the verdict
+    // screen. Tapping unseals it early. When editing, it has already been
+    // revealed, so it shows plainly. Once readable, tapping expands it.
+    private func predictionView(_ prediction: String) -> some View {
+        let isSealed = !isEditing && !isPredictionUnsealed
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Your prediction")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+
+            Button {
+                if isSealed {
+                    withAnimation(.easeOut(duration: 0.6)) {
+                        isPredictionUnsealed = true
+                    }
+                } else {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isOriginalResponseExpanded.toggle()
+                    }
+                }
+            } label: {
+                Text(prediction)
+                    .font(.body)
+                    .multilineTextAlignment(.leading)
+                    .lineLimit(isOriginalResponseExpanded ? nil : 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .blur(radius: isSealed ? PredictionRealityCard.sealedBlurRadius : 0)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isSealed ? "Prediction, hidden" : prediction)
+            .accessibilityHint(isSealed ? "Double tap to reveal" : "")
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
     }
 
     private var isEditing: Bool {
@@ -176,13 +198,16 @@ struct CheckInView: View {
             } else {
                 let checkIn = CheckIn(text: trimmedText, checkInType: checkInType, episode: episode)
                 modelContext.insert(checkIn)
-
-                // Cancel the notification for this check-in type
-                episode.cancelNotificationForCheckIn(checkInType)
             }
 
             // Save the context to persist changes
             try modelContext.save()
+
+            // Only once the check-in is safely stored: its reminder is no
+            // longer needed (the ID change is picked up by autosave)
+            if existingCheckIn == nil {
+                episode.cancelNotificationForCheckIn(checkInType)
+            }
 
             // Recalculate the badge from actual pending check-ins rather than
             // zeroing it, in case other episodes still have one pending
@@ -207,16 +232,16 @@ struct CheckInView: View {
             }
 
         } catch {
-            // Handle the error gracefully
+            // Undo the unsaved insert/edit so a retry doesn't double up, and
+            // keep the sheet open with the text intact
             print("Error saving check-in: \(error)")
-            // Could show an alert to the user here, but for now just continue
-            onCompletion?()
-            dismiss()
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
         }
     }
 }
 
-#Preview {
+#Preview("24-Hour Check-in") {
     let episode = Episode(
         title: "Work Stress Episode",
         emotions: ["Anxiety": 4, "Overwhelm": 3],
@@ -229,11 +254,6 @@ struct CheckInView: View {
         ]
     )
     
-    return Group {
-        // 24-hour check-in preview
-        CheckInView(episode: episode, checkInType: .twentyFourHour)
-            .previewDisplayName("24-Hour Check-in")
-
-    }
-    .modelContainer(for: [Episode.self, CheckIn.self], inMemory: true)
+    return CheckInView(episode: episode, checkInType: .twentyFourHour)
+        .modelContainer(for: [Episode.self, CheckIn.self], inMemory: true)
 }

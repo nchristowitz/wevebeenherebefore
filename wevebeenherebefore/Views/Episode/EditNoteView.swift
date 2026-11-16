@@ -2,19 +2,21 @@ import SwiftUI
 import SwiftData
 
 struct EditNoteView: View {
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isFocused: Bool
-    
+
     let note: EpisodeNote
     @State private var noteText: String = ""
-    
+    @State private var saveError: String?
+
     init(note: EpisodeNote) {
         self.note = note
         _noteText = State(initialValue: note.text)
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Edit note")
                     .font(.title)
@@ -61,15 +63,24 @@ struct EditNoteView: View {
         .onAppear {
             isFocused = true
         }
+        .saveErrorAlert($saveError)
     }
-    
+
     private func saveNote() {
         let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
-        
+
         note.text = trimmedText
-        
-        dismiss()
+
+        // Save now rather than relying on autosave, so a failure is visible
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            print("Error saving note: \(error)")
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
+        }
     }
 }
 

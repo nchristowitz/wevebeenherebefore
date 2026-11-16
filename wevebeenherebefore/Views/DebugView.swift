@@ -10,7 +10,7 @@ struct DebugView: View {
     @State private var alertMessage = ""
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section("Mock Episodes") {
                     Button("Add Recent Episode (24h ago)") {
@@ -40,6 +40,11 @@ struct DebugView: View {
 
                     Button("Add Delight with Song") {
                         addMockSongCard()
+                    }
+                    .foregroundColor(.blue)
+
+                    Button("Add Cards in Sample Colors") {
+                        addSampleColorCards()
                     }
                     .foregroundColor(.blue)
                 }
@@ -172,6 +177,39 @@ struct DebugView: View {
         }
     }
     
+    // Cards across the kinds of colors people pick — bright, pastel, near
+    // white — for checking how cards look in light and Dark Mode
+    private func addSampleColorCards() {
+        let samples: [(text: String, type: CardType, red: Double, green: Double, blue: Double)] = [
+            ("Sunlight on the kitchen floor", .delight, 1.00, 0.84, 0.04),
+            ("Cold water, then a slow walk", .technique, 1.00, 0.58, 0.00),
+            ("The first night in the new flat", .memory, 1.00, 0.71, 0.76),
+            ("Fresh basil on the balcony", .delight, 0.40, 0.80, 0.40),
+            ("Box breathing, four counts each", .technique, 0.35, 0.78, 0.98),
+            ("Finishing the half marathon", .memory, 0.91, 0.30, 0.24),
+            ("Clean sheets", .delight, 1.00, 1.00, 1.00),
+            ("Write it down, then close the notebook", .technique, 0.95, 0.95, 0.97)
+        ]
+
+        for sample in samples {
+            let card = Card(
+                text: sample.text,
+                type: sample.type,
+                color: Color(.sRGB, red: sample.red, green: sample.green, blue: sample.blue, opacity: 1),
+                date: sample.type == .memory ? Date() : nil
+            )
+            modelContext.insert(card)
+        }
+
+        do {
+            try modelContext.save()
+            alertMessage = "Added \(samples.count) cards in sample colors"
+        } catch {
+            alertMessage = "Error saving cards: \(error.localizedDescription)"
+        }
+        showingAlert = true
+    }
+
     private func addMockSongCard() {
         let textCard = Card(
             text: "This song always brings me back",

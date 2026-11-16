@@ -6,6 +6,7 @@ struct AddDelightView: View {
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var selectedColor: Color
+    @Environment(\.colorScheme) private var colorScheme
     @State private var attachedSong: CardSong?
     @State private var isShowingSongPicker = false
     @State private var isShowingMusicAccessAlert = false
@@ -13,7 +14,7 @@ struct AddDelightView: View {
 
     init(existingCard: Card? = nil) {
         self.existingCard = existingCard
-        _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
+        _selectedColor = State(initialValue: existingCard?.color ?? Card.defaultColor)
         _selectedImageData = State(initialValue: existingCard?.imageData)
         _attachedSong = State(initialValue: existingCard?.song)
     }
@@ -48,11 +49,13 @@ struct AddDelightView: View {
                                 Image(systemName: "photo")
                                 Text("Add Photo")
                             }
-                            .foregroundColor(selectedColor.contrastingTextColor())
+                            .foregroundColor(selectedColor.cardTextColor(for: colorScheme))
                         }
                         .onChange(of: selectedItem) {
                             Task {
-                                if let data = try? await selectedItem?.loadTransferable(type: Data.self) {
+                                if let original = try? await selectedItem?.loadTransferable(type: Data.self) {
+                                    // Store a screen-sized copy, not the full-resolution original
+                                    let data = Card.downscaledImageData(original) ?? original
                                     selectedImageData = data
                                     if let uiImage = UIImage(data: data),
                                        let color = await extractColor(from: uiImage) {
@@ -65,7 +68,7 @@ struct AddDelightView: View {
 
                     if attachedSong == nil {
                         AddSongChip(
-                            textColor: selectedColor.contrastingTextColor(),
+                            textColor: selectedColor.cardTextColor(for: colorScheme),
                             isShowingPicker: $isShowingSongPicker,
                             isShowingAccessAlert: $isShowingMusicAccessAlert
                         )
@@ -95,8 +98,8 @@ struct AddDelightView: View {
     private func extractColor(from image: UIImage) async -> Color? {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let uiColor = image.averageColor ?? .systemGray6
-                continuation.resume(returning: Color(uiColor: uiColor))
+                let color = image.averageColor.map { Color(uiColor: $0) } ?? Card.defaultColor
+                continuation.resume(returning: color)
             }
         }
     }

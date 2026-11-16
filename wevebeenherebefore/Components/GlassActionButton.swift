@@ -1,8 +1,8 @@
 import SwiftUI
 
 // Full-width primary action button used across the episode flow
-// (emotion rating, prompts, check-in verdict, remember carousels).
-// Liquid glass on iOS 26, thick material capsule on earlier versions.
+// (emotion rating, prompts, check-in verdict, remember carousels),
+// in Liquid Glass.
 struct GlassActionButton: View {
     let title: String
     let action: () -> Void
@@ -11,16 +11,8 @@ struct GlassActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            if #available(iOS 26.0, *) {
-                label
-                    .glassEffect()
-            } else {
-                label
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.thickMaterial)
-                    )
-            }
+            label
+                .glassEffect()
         }
         .opacity(isEnabled ? 1 : 0.4)
         .animation(.easeInOut(duration: 0.15), value: isEnabled)
@@ -36,8 +28,7 @@ struct GlassActionButton: View {
 }
 
 // Floating glass chip for the input accessories on the card editors
-// (photo picker, color well). Same iOS 26 / fallback split as
-// GlassActionButton. All accessory controls share a 44pt height.
+// (photo picker, color well). All accessory controls share a 44pt height.
 let accessoryControlHeight: CGFloat = 44
 
 struct GlassAccessoryChip<Content: View>: View {
@@ -45,19 +36,10 @@ struct GlassAccessoryChip<Content: View>: View {
     @ViewBuilder let content: Content
 
     var body: some View {
-        if #available(iOS 26.0, *) {
-            padded
-                .glassEffect()
-        } else {
-            padded
-                .background(Capsule().fill(.thickMaterial))
-        }
-    }
-
-    private var padded: some View {
         content
             .padding(.horizontal, horizontalPadding)
             .frame(minHeight: accessoryControlHeight)
+            .glassEffect()
     }
 }
 

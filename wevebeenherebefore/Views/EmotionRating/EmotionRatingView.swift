@@ -26,7 +26,7 @@ struct EmotionRatingView: View {
                         .padding(.top)
                         .accessibilityAddTraits(.isHeader)
                     
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 20) {
                         ForEach(Array(emotions.keys.sorted()), id: \.self) { emotion in
                             EmotionRatingRow(
                                 emotion: emotion,
@@ -64,41 +64,71 @@ struct EmotionRatingView: View {
 struct EmotionRatingRow: View {
     let emotion: String
     @Binding var rating: Int
-    
+
+    private var color: Color {
+        EmotionColor.color(for: emotion)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(emotion)
                 .font(.headline)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityAddTraits(.isHeader)
-            
-            GeometryReader { geometry in
-                let availableWidth = max(geometry.size.width, 1) // Ensure width is never zero
-                let spacing: CGFloat = 16
-                let totalSpacing = spacing * 4 // 4 spaces between 5 circles
-                let circleSize = max((availableWidth - totalSpacing) / 5, 1) // Ensure circle size is never zero or negative
-                
-                HStack(spacing: spacing) {
-                    ForEach(1...5, id: \.self) { value in
-                        Circle()
-                            .fill(rating >= value ? Color.primary : Color.primary.opacity(0.1))
-                            .overlay(
-                                Text("\(value)")
-                                    .foregroundColor(rating >= value ? Color(.systemBackground) : Color.primary)
-                            )
-                            .frame(width: circleSize, height: circleSize)
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) {
-                                    // Tapping the current rating again clears it
-                                    rating = rating == value ? 0 : value
-                                }
+
+            // Five short segments rather than full circles, so more rows fit
+            // on screen. Segments up to the rating fill with the emotion's color.
+            HStack(spacing: 6) {
+                ForEach(1...5, id: \.self) { value in
+                    let isFilled = rating >= value
+
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isFilled ? color : Color.primary.opacity(0.08))
+                        .frame(height: 44)
+                        .overlay(
+                            Text("\(value)")
+                                .font(.subheadline)
+                                .fontWeight(isFilled ? .semibold : .regular)
+                                .foregroundColor(isFilled ? .white : .primary)
+                        )
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) {
+                                // Tapping the current rating again clears it
+                                rating = rating == value ? 0 : value
                             }
-                    }
+                        }
                 }
             }
-            .frame(height: 60)
         }
         .accessibilityElement(children: .contain)
+    }
+}
+
+// One hue per emotion, shared by the rating rows and the episode detail
+// bars. Emotions outside the rating list (from older episodes) are gray.
+enum EmotionColor {
+    static func color(for emotion: String) -> Color {
+        switch emotion {
+        case "Anger":
+            return .red
+        case "Sadness":
+            return .blue
+        case "Fear":
+            return .purple
+        case "Anxiety":
+            return .indigo
+        case "Shame":
+            return .brown
+        case "Disgust":
+            return .green
+        case "Grief":
+            return .teal
+        case "Confusion":
+            return .orange
+        default:
+            return .gray
+        }
     }
 }
 

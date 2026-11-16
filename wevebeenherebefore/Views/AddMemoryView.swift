@@ -4,6 +4,7 @@ import MediaPlayer
 struct AddMemoryView: View {
     @State private var selectedDate = Date()
     @State private var selectedColor: Color
+    @Environment(\.colorScheme) private var colorScheme
     @State private var attachedSong: CardSong?
     @State private var isShowingSongPicker = false
     @State private var isShowingMusicAccessAlert = false
@@ -13,7 +14,7 @@ struct AddMemoryView: View {
     init(existingCard: Card? = nil, initialText: String? = nil) {
         self.existingCard = existingCard
         self.initialText = initialText
-        _selectedColor = State(initialValue: existingCard?.color ?? Color(uiColor: .systemGray6))
+        _selectedColor = State(initialValue: existingCard?.color ?? Card.defaultColor)
         _selectedDate = State(initialValue: existingCard?.date ?? Date())
         _attachedSong = State(initialValue: existingCard?.song)
     }
@@ -59,7 +60,7 @@ struct AddMemoryView: View {
 
                     if attachedSong == nil {
                         AddSongChip(
-                            textColor: selectedColor.contrastingTextColor(),
+                            textColor: selectedColor.cardTextColor(for: colorScheme),
                             isShowingPicker: $isShowingSongPicker,
                             isShowingAccessAlert: $isShowingMusicAccessAlert
                         )

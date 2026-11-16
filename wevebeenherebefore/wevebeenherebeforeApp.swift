@@ -35,7 +35,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     // Handle notifications when app is in foreground
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // Show notification even when app is in foreground
-        completionHandler([.alert, .sound, .badge])
+        completionHandler([.banner, .list, .sound, .badge])
     }
     
     // Handle notification taps
@@ -90,6 +90,13 @@ struct wevebeenherebeforeApp: App {
                         modelContext: sharedModelContainer.mainContext
                     )
                 }
+                .task {
+                    // Image work is slow, so keep it off the main thread
+                    let container = sharedModelContainer
+                    await Task.detached(priority: .utility) {
+                        downscaleStoredCardPhotosIfNeeded(in: container)
+                    }.value
+                }
         }
         .modelContainer(sharedModelContainer)
     }
@@ -120,6 +127,36 @@ func ensureUniqueEpisodeUUIDs(in container: ModelContainer) {
         } catch {
             print("❌ Failed to backfill episode UUIDs: \(error)")
         }
+    }
+}
+
+// One-time: shrink card photos stored at full resolution before photos
+// were downscaled on pick (see Card.downscaledImageData). Uses its own
+// context so it can run off the main thread; the UI picks up the save.
+func downscaleStoredCardPhotosIfNeeded(in container: ModelContainer) {
+    let migrationKey = "didDownscaleCardPhotos"
+    guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
+
+    let context = ModelContext(container)
+    guard let cards = try? context.fetch(FetchDescriptor<Card>()) else { return }
+
+    var shrunkCount = 0
+    for card in cards {
+        guard let original = card.imageData,
+              let smaller = Card.downscaledImageData(original),
+              smaller.count < original.count else { continue }
+        card.imageData = smaller
+        shrunkCount += 1
+    }
+
+    do {
+        if shrunkCount > 0 {
+            try context.save()
+        }
+        UserDefaults.standard.set(true, forKey: migrationKey)
+        print("✅ Downscaled \(shrunkCount) card photos")
+    } catch {
+        print("❌ Failed to save downscaled card photos: \(error)")
     }
 }
 
@@ -155,5 +192,20 @@ struct MainTabView: View {
                 .tag(AppTab.settings)
         }
         .tint(.primary)
+        .onAppear {
+            refreshBadgeCount()
+
+            Task {
+                await NotificationManager.shared.checkPermission()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Check-in windows open and close while the app is in the background
+            refreshBadgeCount()
+        }
+    }
+
+    private func refreshBadgeCount() {
+        NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
     }
 }
