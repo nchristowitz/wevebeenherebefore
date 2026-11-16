@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 "We've Been Here Before" is a personal SwiftUI iOS app focused on building emotional resilience. The core philosophy is that when you're in a difficult emotional moment, it helps to remember that you've navigated similar struggles before and survived them.
 
+The app is for one person (the developer) on their own iPhone. It targets **iOS 26+** — no fallbacks for older versions.
+
 The app helps users:
 1. **Build a resilience toolkit** of memories, delights, and techniques
 2. **Log emotional episodes** with guided prompts that encourage future-focused reflection
@@ -26,10 +28,12 @@ The app is built around the insight that emotional episodes feel overwhelming in
   - `delight`: Things that bring joy (has optional image)
   - `technique`: Coping strategies
   - All cards have text, color (stored as RGB doubles), and timestamps
+  - Delights and memories can carry an Apple Music song (flattened `song*` fields)
 
 - **Episode**: Emotional episodes containing:
+  - `uuid`: Stable identity used for notifications and import de-duplication
   - `emotions`: Dictionary of emotion names to ratings (0-5)
-  - `prompts`: Dictionary of prompt questions to user responses
+  - `prompts`: Dictionary of prompt question wording to user responses
   - `summary`: Optional reflection written after 3 months
   - `summaryCreatedAt`: When the summary was written
   - Relationships to notes and check-ins (cascade delete)
@@ -44,8 +48,8 @@ The app is built around the insight that emotional episodes feel overwhelming in
 ### Navigation Structure
 
 Three-tab interface (`MainTabView`):
-1. **Episodes**: List of past episodes, create new episodes
-2. **Resilience**: Card toolkit + pending check-ins, filter menu with shuffle toggle
+1. **Episodes**: Open check-in cards at the top, then past episodes grouped by year and month; create new episodes. The tab badge counts open check-ins.
+2. **Resilience**: Card toolkit, filter menu with shuffle toggle
 3. **Settings**: Notification time, export/import, debug tools
 
 ### Key Flows
@@ -53,9 +57,13 @@ Three-tab interface (`MainTabView`):
 **Episode Creation Flow** (`EpisodeFlowCoordinator`):
 1. Rate emotions (0-5 scale)
 2. Answer guided prompts about the episode and future predictions
-3. Review and save
-4. **RememberView**: Carousel of past episode summaries (skipped if none exist)
+3. Review and save — Back returns to the title prompt with all answers kept
+4. **RememberView**: Carousel of past summaries and prediction-vs-reality pairs (skipped if none exist)
 5. **ResilienceRemindersView**: Carousel of random toolkit cards
+
+**Check-in Flow** (`CheckInView`):
+- The prediction for that horizon shows at the top, blurred ("sealed") so it doesn't anchor what the user writes; tapping unseals it early
+- Saving shows the verdict screen (`PredictionRealityCard`), revealing the prediction next to what was just written
 
 **Episode Summary Flow**:
 - Available 90 days after episode creation (`canAddSummary`)
@@ -81,27 +89,31 @@ Three-tab interface (`MainTabView`):
 
 1. **Calm experience** - UI should promote clarity, not add stress
 2. **Consistent patterns** - Carousels use `TabView` with `.page` style, text input uses similar editor patterns throughout
-3. **Native feel** - Use system materials (`.regularMaterial`, `.thickMaterial`), standard swipe actions, iOS 26 liquid glass when available
+3. **Native feel** - Use system materials (`.regularMaterial`, `.thickMaterial`), standard swipe actions, Liquid Glass (`.glassEffect()`)
 4. **Cards fill space** - In carousels, cards expand to fill available height. Photo-only cards fill edge-to-edge
+5. **The user's writing leads** - On the episode detail screen, answers are primary text; questions are small grey labels
 
 ### SwiftUI Patterns Used
 
-- **Sheets for flows**: Modal presentation via `.sheet(item:)`
+- **Sheets for flows**: Modal presentation via `.sheet(item:)`, each sheet in its own `NavigationStack` (no `NavigationView`)
 - **Enum-based sheet state**: Type-safe sheet management with `Identifiable` enums
 - **TabView carousels**: Horizontal swiping with `.tabViewStyle(.page)`
-- **Swipe actions**: Edit/delete with `.swipeActions()`, explicit `.tint()` colors
+- **Swipe actions**: Edit/delete with `.swipeActions()`, explicit `.tint()` colors. Delete buttons have no `role: .destructive` (that removes the row before confirming) and set a `...PendingDeletion` state that drives a confirmation `.alert`
 - **Material backgrounds**: `.regularMaterial`, `.thickMaterial` for cards and buttons
-- **Contrasting text**: `color.contrastingTextColor()` for readable text on colored backgrounds
+- **Card colors**: `color.cardColor(for: colorScheme)` / `color.cardTextColor(for: colorScheme)` — never use a card's stored color directly for drawing
+- **Save failures**: Editors call `modelContext.save()` explicitly; on failure they `rollback()`, keep the sheet open, and show `.saveErrorAlert($saveError)` (Components/SaveErrorAlert.swift)
 
 ## Key Development Commands
 
 ```bash
 # Build the project
-xcodebuild -project wevebeenherebefore.xcodeproj -scheme wevebeenherebefore -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild -project wevebeenherebefore.xcodeproj -scheme wevebeenherebefore -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
 
 # Run tests
-xcodebuild test -project wevebeenherebefore.xcodeproj -scheme wevebeenherebefore -destination 'platform=iOS Simulator,name=iPhone 15'
+xcodebuild test -project wevebeenherebefore.xcodeproj -scheme wevebeenherebefore -destination 'platform=iOS Simulator,name=iPhone 18 Pro'
 ```
+
+Simulators must run iOS 26 or later.
 
 ## File Organization
 
@@ -109,21 +121,34 @@ xcodebuild test -project wevebeenherebefore.xcodeproj -scheme wevebeenherebefore
 wevebeenherebefore/
 ├── Models/                 # SwiftData models (Card, Episode, CheckIn, EpisodeNote)
 ├── Views/
-│   ├── Episode/            # Episode flow views (EpisodeFlowCoordinator, EpisodeSummaryView,
-│   │                       #   RememberView, ResilienceRemindersView, CheckInView, AddSummaryView)
+│   ├── Episode/            # Episode flow views (EpisodeFlowCoordinator, EpisodePromptView,
+│   │                       #   EpisodeSummaryView, RememberView, ResilienceRemindersView,
+│   │                       #   CheckInView, AddSummaryView, EpisodesListView)
+│   ├── EmotionRating/      # Emotion rating screen and the shared EmotionColor palette
 │   ├── AddCardBaseView     # Base view for card creation (accepts initialText for pre-population)
 │   ├── AddMemoryView       # Memory card creation (accepts initialText)
 │   ├── AddDelightView      # Delight card creation with photo picker
 │   ├── AddTechniqueView    # Technique card creation
-│   ├── ResilienceView      # Main toolkit view with cards and pending check-ins
-│   ├── EpisodesListView    # List of all episodes
+│   ├── ResilienceView      # Main toolkit view with cards
 │   └── SettingsView        # App settings (notification time, export/import, debug)
-├── Components/             # Reusable UI (CardTextEditor, CheckInCard, etc.)
-├── Utils/                  # NotificationManager, NotificationCoordinator, ColorUtils
-└── Extensions/             # Swift extensions
+├── Components/             # Reusable UI (CardTextEditor, CheckInCard, SaveErrorAlert, etc.)
+└── Utils/                  # NotificationManager, NotificationCoordinator, ColorUtils,
+                            #   ExportManager, ImportManager
 ```
 
 ## Key Implementation Details
+
+### Episode Prompts
+
+- `EpisodePrompt.prompts` (EpisodePromptView.swift) is the single source of truth for the prompts, their order, and which check-in each prediction belongs to (`checkInType`)
+- Answers are stored keyed by the question's wording at the time. **When rewording a question, add the old wording to its `earlierQuestions`** — that's how old episodes still find their predictions and display in order
+- `EpisodePrompt.answeredPrompts(from:)` returns an episode's answers in prompt order for display; `Episode.prediction(for:)` finds a prediction under any wording
+- `EpisodePrompt.titleQuestion` is the title prompt's key
+
+### Check-in Timing
+
+- `Episode.checkInWindow(for:)` is the single source of truth for when a check-in can be added: 24h = the calendar day after the episode, 2w = day 14, 3m = 5 days from day 90
+- The pending cards, the episode detail screen, and reminder dates all derive from it
 
 ### Episode Summary Feature
 
@@ -135,18 +160,26 @@ wevebeenherebefore/
 
 ### Carousel Views
 
-- **RememberView**: Shows shuffled episode summaries in carousel, skipped if no summaries exist
+- **RememberView**: Shows shuffled past summaries and prediction-vs-reality pairs, skipped if none exist
 - **ResilienceRemindersView**: Shows up to 4 random toolkit cards in carousel
 - **CarouselCardView**: Handles both text cards and photo-only cards (photo-only fills container with `scaledToFill`)
+- Both are shown inside the coordinator's `NavigationStack` — don't wrap them in another one
 
 ### Notification System
 
-1. Episode creation triggers `scheduleNotifications()`
-2. Notifications scheduled at user-configured time (default 9 AM), stored in `@AppStorage("notificationHour")` and `@AppStorage("notificationMinute")`
-3. Notification taps handled: AppDelegate → NotificationCoordinator → View navigation
-4. Badge count reflects active uncompleted check-in windows
+1. Episode creation triggers scheduling; reminders go out at the user-configured time on the day each check-in window opens
+2. Reminder time is stored in `@AppStorage("notificationHour")` and `@AppStorage("notificationMinute")`; changing it in Settings re-schedules all pending reminders (`rescheduleForNewReminderTime`)
+3. `scheduleRemainingNotifications(for:)` schedules only check-ins still ahead (not done, not dismissed, not past) — used by rescheduling and import
+4. Notification taps handled: AppDelegate → NotificationCoordinator → View navigation
+5. Badge count reflects active uncompleted check-in windows, refreshed from `MainTabView` on launch and when the app becomes active
 
 **Important**: When cancelling notifications (e.g., on episode deletion), always use the stored `notificationIDs` array on the Episode model rather than regenerating IDs from `persistentModelID`. The string representation of `persistentModelID` can differ between scheduling and cancellation, causing silent cancellation failures.
+
+### Import / Export
+
+- JSON is the only format that can be imported back; it includes photos and songs
+- Import skips anything already in the app: episodes by `uuid` (or same title and creation time for old backups), cards by type, text and creation time
+- Imported episodes get reminders for their remaining check-ins
 
 ### User Settings (@AppStorage)
 
@@ -164,12 +197,27 @@ Settings are stored via `@AppStorage` for persistence:
 ### Color Management
 
 - Cards store RGB as `colorRed`, `colorGreen`, `colorBlue` (Double 0.0-1.0)
-- Computed `color` property converts to SwiftUI Color
+- Computed `color` property converts to SwiftUI Color; the setter uses `Color.sRGBComponents`, which handles grayscale colors safely
+- New cards default to `Card.defaultColor` (fixed light grey) — not an adaptive system color, which would be stored as near-black if created in Dark Mode
 - `Color.contrastingTextColor()` returns black or white based on brightness
+
+### Dark Mode
+
+- Card colors (and the fixed check-in card colors) show as chosen in light mode and as `darkCardVariant` in Dark Mode: same hue in OKLCH, darkened so white text has at least 7:1 contrast (Apple's recommendation for custom colors). Tuning constants are in `ColorUtils.swift` (`DarkCard`)
+- Stored colors are never changed — the dark version is computed for display
+- Card photos use `.dimmedInDarkMode()` (12% darker in Dark Mode only), per Apple's guidance to slightly darken bright content images
+- Debug Tools → "Add Cards in Sample Colors" seeds cards for checking both modes
+
+### Photos
+
+- Card photos are stored at most 2048 px on the longest edge (`Card.downscaledImageData`) — on pick and on import
+- A one-time launch migration (`downscaleStoredCardPhotosIfNeeded`) shrank photos stored before this
 
 ## Testing Notes
 
-- Uses Swift Testing framework (not XCTest)
+- Uses Swift Testing framework (not XCTest) for unit tests; XCUIAutomation for UI tests
 - Test with `@testable import wevebeenherebefore`
-- Minimal test coverage currently
+- Unit tests cover export/import round trips and de-duplication, check-in windows, UUIDs, prediction-vs-reality pairs, prompt order across wordings, colors, and photo downscaling
+- `ExportImportRoundTripTests` is `.serialized`: export file names are only unique to the second, so parallel export tests would overwrite each other's file
+- `UIRefreshScreenshotTests` walks the main screens and saves screenshots to /tmp/wbhb-screens; run on an erased simulator
 - Manual testing on device recommended for notification and UI flows

@@ -8,9 +8,10 @@ struct AddNoteView: View {
     
     let episode: Episode
     @State private var noteText: String = ""
-    
+    @State private var saveError: String?
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Add a note")
                     .font(.title)
@@ -57,16 +58,25 @@ struct AddNoteView: View {
         .onAppear {
             isFocused = true
         }
+        .saveErrorAlert($saveError)
     }
-    
+
     private func saveNote() {
         let trimmedText = noteText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedText.isEmpty else { return }
-        
+
         let note = EpisodeNote(text: trimmedText, episode: episode)
         modelContext.insert(note)
-        
-        dismiss()
+
+        // Save now rather than relying on autosave, so a failure is visible
+        do {
+            try modelContext.save()
+            dismiss()
+        } catch {
+            print("Error saving note: \(error)")
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
+        }
     }
 }
 

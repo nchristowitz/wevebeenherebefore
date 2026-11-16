@@ -2,7 +2,6 @@ import SwiftUI
 import SwiftData
 
 struct ResilienceRemindersView: View {
-    @Environment(\.dismiss) private var dismiss
     @Query(sort: \Card.createdAt, order: .reverse) private var allCards: [Card]
 
     let onComplete: () -> Void
@@ -12,87 +11,83 @@ struct ResilienceRemindersView: View {
     @State private var currentIndex: Int = 0
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                if resilienceCards.isEmpty {
-                    // Empty state
-                    VStack(spacing: 16) {
-                        Image(systemName: "heart.circle")
-                            .font(.system(size: 60))
-                            .foregroundColor(.secondary)
+        ZStack {
+            if resilienceCards.isEmpty {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "heart.circle")
+                        .font(.system(size: 60))
+                        .foregroundColor(.secondary)
 
-                        Text("No resilience cards yet")
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                    Text("No resilience cards yet")
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-                        Text("Add techniques and delights to your toolkit to see them here.")
+                    Text("Add techniques and delights to your toolkit to see them here.")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                }
+            } else {
+                VStack(spacing: 0) {
+                    // Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("From your resilience toolkit")
+                            .font(.title)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+
+                        Text("Swipe through memories, techniques, and delights that have helped you before.")
                             .font(.body)
                             .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
                     }
-                } else {
-                    VStack(spacing: 0) {
-                        // Header
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("From your resilience toolkit")
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .padding(.top, 16)
+                    .padding(.bottom, 8)
 
-                            Text("Swipe through memories, techniques, and delights that have helped you before.")
-                                .font(.body)
-                                .foregroundColor(.secondary)
+                    // Carousel
+                    TabView(selection: $currentIndex) {
+                        ForEach(Array(resilienceCards.enumerated()), id: \.element.id) { index, card in
+                            CarouselCardView(card: card)
+                                .tag(index)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal)
-                        .padding(.top, 16)
-                        .padding(.bottom, 8)
-
-                        // Carousel
-                        TabView(selection: $currentIndex) {
-                            ForEach(Array(resilienceCards.enumerated()), id: \.element.id) { index, card in
-                                CarouselCardView(card: card)
-                                    .tag(index)
-                            }
-                        }
-                        .tabViewStyle(.page(indexDisplayMode: .automatic))
-
-                        // Spacer for continue button
-                        Color.clear.frame(height: 80)
                     }
-                }
+                    .tabViewStyle(.page(indexDisplayMode: .automatic))
 
-                // Continue button
-                VStack {
-                    Spacer()
-                    GlassActionButton(title: "Continue") {
-                        onComplete()
-                        dismiss()
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 20)
+                    // Spacer for continue button
+                    Color.clear.frame(height: 80)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationTitle("")
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        onComplete()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .foregroundColor(.primary)
-                    }
+
+            // Continue button
+            VStack {
+                Spacer()
+                GlassActionButton(title: "Continue") {
+                    onComplete()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("")
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    onComplete()
+                } label: {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
                 }
             }
-            .onAppear {
-                // Set random cards once on appear to prevent refresh glitch
-                if resilienceCards.isEmpty {
-                    resilienceCards = Array(allCards.shuffled().prefix(4))
-                }
+        }
+        .onAppear {
+            // Set random cards once on appear to prevent refresh glitch
+            if resilienceCards.isEmpty {
+                resilienceCards = Array(allCards.shuffled().prefix(4))
             }
         }
     }
@@ -101,6 +96,8 @@ struct ResilienceRemindersView: View {
 // Card view optimized for carousel display
 struct CarouselCardView: View {
     let card: Card
+
+    @Environment(\.colorScheme) private var colorScheme
 
     // Check if this is an image-only card (has image, no text)
     private var isImageOnly: Bool {
@@ -129,6 +126,7 @@ struct CarouselCardView: View {
                     .resizable()
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .dimmedInDarkMode()
                     .clipped()
                     // Full-bleed image is clipped by the card's 20pt corners
                     .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 20) }
@@ -150,6 +148,7 @@ struct CarouselCardView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(maxWidth: .infinity)
+                            .dimmedInDarkMode()
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 12) }
                             .padding(.horizontal, 20)
@@ -173,8 +172,8 @@ struct CarouselCardView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(card.color)
-                .foregroundColor(card.color.contrastingTextColor())
+                .background(card.color.cardColor(for: colorScheme))
+                .foregroundColor(card.color.cardTextColor(for: colorScheme))
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 20))

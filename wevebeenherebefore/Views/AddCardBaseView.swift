@@ -4,6 +4,7 @@ import SwiftData
 struct AddCardBaseView<Content: View>: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
 
     let type: CardType
     @State private var text: String = ""
@@ -14,6 +15,8 @@ struct AddCardBaseView<Content: View>: View {
     let onRemoveImage: (() -> Void)?
     let content: () -> Content
     let existingCard: Card?
+
+    @State private var saveError: String?
 
     init(type: CardType, selectedColor: Binding<Color>, date: Date? = nil, imageData: Data? = nil, song: CardSong? = nil, onRemoveImage: (() -> Void)? = nil, existingCard: Card? = nil, initialText: String? = nil, @ViewBuilder content: @escaping () -> Content) {
         self.type = type
@@ -33,9 +36,10 @@ struct AddCardBaseView<Content: View>: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
-                selectedColor
+                // Shows the card as it will look in the current appearance
+                selectedColor.cardColor(for: colorScheme)
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
@@ -46,6 +50,7 @@ struct AddCardBaseView<Content: View>: View {
                                 .resizable()
                                 .scaledToFit()
                                 .frame(maxHeight: 200)
+                                .dimmedInDarkMode()
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
                             if let onRemoveImage = onRemoveImage {
@@ -66,7 +71,7 @@ struct AddCardBaseView<Content: View>: View {
                     CardTextEditor(
                         text: $text,
                         placeholder: AppConfig.cardPlaceholders[type] ?? "",
-                        textColor: selectedColor.contrastingTextColor()
+                        textColor: selectedColor.cardTextColor(for: colorScheme)
                     )
                     .padding(.horizontal)
 
@@ -79,31 +84,20 @@ struct AddCardBaseView<Content: View>: View {
                     Button("Back") {
                         dismiss()
                     }
-                    .foregroundColor(selectedColor.contrastingTextColor())
+                    .foregroundColor(selectedColor.cardTextColor(for: colorScheme))
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
                         saveCard()
                     }
-                    .foregroundColor(selectedColor.contrastingTextColor())
+                    .foregroundColor(selectedColor.cardTextColor(for: colorScheme))
                 }
 
             }
         }
+        .saveErrorAlert($saveError)
     }
-    
-    private var placeholderText: String {
-        switch type {
-        case .memory:
-            return "Briefly describe a memory that shows your resilience. E.g. I overcame my fear of failure and learned German."
-        case .delight:
-            return "Keep the delight short and sweet. E.g. The way my cat's fur feels under his neck."
-        case .technique:
-            return "What helps you in moments like this? E.g. Go for a long coffee walk"
-        }
-    }
-    
-    
+
     private var supportsSong: Bool {
         type == .delight || type == .memory
     }
@@ -139,31 +133,17 @@ struct AddCardBaseView<Content: View>: View {
             try modelContext.save()
             dismiss()
         } catch {
-            // Handle the error gracefully
+            // Undo the unsaved insert/edit so a retry doesn't double up;
+            // the editor stays open with everything intact
             print("Error saving card: \(error)")
-            // You could show an alert to the user here
+            modelContext.rollback()
+            saveError = saveErrorMessage(for: error)
         }
     }
 }
 
-// Helper extension to convert Color to hex string
-extension Color {
-    func toHex() -> String? {
-        guard let components = UIColor(self).cgColor.components else { return nil }
-        
-        let r = Float(components[0])
-        let g = Float(components[1])
-        let b = Float(components[2])
-        
-        return String(format: "#%02lX%02lX%02lX",
-                     lroundf(r * 255),
-                     lroundf(g * 255),
-                     lroundf(b * 255))
-    }
-}
-
 #Preview {
-    AddCardBaseView(type: .delight, selectedColor: .constant(Color(uiColor: .systemGray6))) {
+    AddCardBaseView(type: .delight, selectedColor: .constant(Card.defaultColor)) {
         EmptyView()
     }
 } 

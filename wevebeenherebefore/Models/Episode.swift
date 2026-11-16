@@ -98,24 +98,10 @@ final class Episode {
     }
 
     // Prompt questions whose responses predict how a given check-in will
-    // feel. Later entries are wordings used by earlier versions of the
-    // episode flow — old episodes still carry them as keys.
+    // feel: the current wording first, then earlier wordings old episodes
+    // still carry as keys. Defined once, in EpisodePrompt.prompts.
     static func predictionPromptKeys(for type: CheckInType) -> [String] {
-        switch type {
-        case .twentyFourHour:
-            return ["How do you think you'll feel tomorrow?"]
-        case .twoWeek:
-            return [
-                "How do you think you'll feel about this in 2 weeks?",
-                "How do you think you'll feel two weeks from now?"
-            ]
-        case .threeMonth:
-            return [
-                "How will you feel 3 months from now?",
-                "How about in 3 months?",
-                "What about 3 months from now?"
-            ]
-        }
+        EpisodePrompt.prompts.first { $0.checkInType == type }?.allQuestions ?? []
     }
 
     // What the user predicted at episode time for this check-in horizon

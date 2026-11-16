@@ -6,18 +6,16 @@ enum FilterType {
     case delight
     case technique
     case imagesOnly
-    case dateNewest
     case dateOldest
 }
 
 struct ResilienceView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Card.createdAt, order: .reverse) private var cards: [Card]
-    @Query private var episodes: [Episode]
-    @ObservedObject private var notificationCoordinator = NotificationCoordinator.shared
 
     @State private var selectedFilter: FilterType?
     @State private var editingCard: Card?
+    @State private var cardPendingDeletion: Card?
     @State private var shuffledCardIDs: [PersistentIdentifier] = []
     @AppStorage("shuffleCardsEnabled") private var shuffleEnabled = false
 
@@ -28,14 +26,12 @@ struct ResilienceView: View {
         case delight(Card? = nil)
         case memory(Card? = nil)
         case technique(Card? = nil)
-        case checkIn(Episode, CheckInType)
 
         var id: String {
             switch self {
             case .delight: return "delight"
             case .memory: return "memory"
             case .technique: return "technique"
-            case .checkIn: return "checkIn"
             }
         }
     }
@@ -67,72 +63,26 @@ struct ResilienceView: View {
             return result.filter { $0.type == .technique }
         case .imagesOnly:
             return result.filter { $0.imageData != nil }
-        case .dateNewest:
-            return result.sorted { $0.createdAt > $1.createdAt }
         case .dateOldest:
             return result.sorted { $0.createdAt < $1.createdAt }
         }
     }
-    
-    struct PendingCheckIn: Identifiable {
-        let episode: Episode
-        let checkInType: CheckInType
-        
-        var id: String {
-            "\(episode.persistentModelID)_\(checkInType.rawValue)"
-        }
-    }
-    
-    var pendingCheckIns: [PendingCheckIn] {
-        episodes.flatMap { episode in
-            episode.pendingCheckInTypes.map { PendingCheckIn(episode: episode, checkInType: $0) }
-        }
-        .sorted { $0.checkInType.daysFromEpisode < $1.checkInType.daysFromEpisode }
-    }
-    
     
     var body: some View {
         NavigationStack {
             ZStack {
                 // Main list content
                 List {
-                    // Check-in cards at the top
-                    ForEach(pendingCheckIns) { checkIn in
-                        CheckInCard(
-                            episode: checkIn.episode,
-                            checkInType: checkIn.checkInType,
-                            onTap: {
-                                activeSheet = .checkIn(checkIn.episode, checkIn.checkInType)
-                            },
-                            onDismiss: {
-                                checkIn.episode.dismissCheckIn(for: checkIn.checkInType)
-                                do {
-                                    try modelContext.save()
-                                    updateBadgeCount()
-                                } catch {
-                                    print("Error dismissing check-in: \(error)")
-                                }
-                            }
-                        )
-                        .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
-
-                    // Regular resilience cards
                     ForEach(filteredCards) { card in
                         CardView(card: card)
                             .listRowInsets(EdgeInsets(top: 4, leading: 8, bottom: 4, trailing: 8))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                             .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    modelContext.delete(card)
-                                    do {
-                                        try modelContext.save()
-                                    } catch {
-                                        print("Error deleting card: \(error)")
-                                    }
+                                // No destructive role: that removes the row
+                                // straight away, before the user confirms
+                                Button {
+                                    cardPendingDeletion = card
                                 } label: {
                                     Label("Delete", systemImage: "trash")
                                 }
@@ -153,6 +103,8 @@ struct ResilienceView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
+                // Room below the last card so the floating '+' never covers it
+                .contentMargins(.bottom, 88, for: .scrollContent)
 
                 // Floating '+' button for adding cards
                 VStack {
@@ -178,25 +130,12 @@ struct ResilienceView: View {
                                 Label("Add Technique", systemImage: "figure.mind.and.body")
                             }
                         } label: {
-                            if #available(iOS 26.0, *) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 60, height: 60)
-                                    .glassEffect()
-                            } else {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 60, height: 60)
-                                    .background(
-                                        Circle()
-                                            .fill(.thickMaterial)
-                                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-                                    )
-                            }
+                            Image(systemName: "plus")
+                                .font(.title2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 60)
+                                .glassEffect()
                         }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
@@ -301,12 +240,22 @@ struct ResilienceView: View {
                     AddMemoryView(existingCard: existingCard)
                 case .technique(let existingCard):
                     AddTechniqueView(existingCard: existingCard)
-                case .checkIn(let episode, let checkInType):
-                    CheckInView(episode: episode, checkInType: checkInType) {
-                        activeSheet = nil
-                        updateBadgeCount()
-                    }
                 }
+            }
+            .alert(
+                "Delete this card?",
+                isPresented: Binding(
+                    get: { cardPendingDeletion != nil },
+                    set: { if !$0 { cardPendingDeletion = nil } }
+                ),
+                presenting: cardPendingDeletion
+            ) { card in
+                Button("Delete", role: .destructive) {
+                    deleteCard(card)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: { card in
+                Text("This \(card.type.rawValue) will be permanently deleted.")
             }
             .onChange(of: editingCard) { _, card in
                 if let card = card {
@@ -323,36 +272,31 @@ struct ResilienceView: View {
             }
         }
         .onAppear {
-            // Update badge count synchronously
-            updateBadgeCount()
-
             // Shuffle cards if enabled
             if shuffleEnabled {
                 shuffleCards()
             }
-
-            // Check permissions in background
-            Task.detached {
-                await NotificationManager.shared.checkPermission()
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
-            // Update badge count when app becomes active
-            updateBadgeCount()
         }
     }
-    
+
     private func shuffleCards() {
         shuffledCardIDs = cards.map { $0.persistentModelID }.shuffled()
     }
 
-    private func updateBadgeCount() {
-        NotificationManager.shared.refreshBadgeCount(modelContext: modelContext)
+    private func deleteCard(_ card: Card) {
+        modelContext.delete(card)
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error deleting card: \(error)")
+        }
     }
 }
 
 struct CardView: View {
     let card: Card
+
+    @Environment(\.colorScheme) private var colorScheme
 
     // Floating play/pause panel inset over the bottom of the card's image,
     // its corners concentric with the image's
@@ -413,6 +357,7 @@ struct CardView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
+                        .dimmedInDarkMode()
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 16) }
                         .accessibilityLabel("Card image")
@@ -422,6 +367,7 @@ struct CardView: View {
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: .infinity)
+                        .dimmedInDarkMode()
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(alignment: .bottom) { songPillOverlay(imageCornerRadius: 8) }
                         .padding(.horizontal)
@@ -448,9 +394,9 @@ struct CardView: View {
                     .padding(.bottom, 16)
             }
         }
-        .background(card.color)
+        .background(card.color.cardColor(for: colorScheme))
         .cornerRadius(20)
-        .foregroundColor(card.color.contrastingTextColor())
+        .foregroundColor(card.color.cardTextColor(for: colorScheme))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint("Double tap to view actions. Swipe actions available.")

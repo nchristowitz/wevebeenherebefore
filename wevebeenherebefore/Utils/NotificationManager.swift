@@ -143,47 +143,20 @@ class NotificationManager: ObservableObject {
         return notificationID
     }
     
+    // The reminder goes out at the user's chosen time on the day the
+    // check-in window opens — the same window (Episode.checkInWindow) the
+    // in-app cards use. If that moment has passed, scheduleNotification skips it.
     private func calculateNotificationDate(for episode: Episode, checkInType: CheckInType) -> Date? {
-        let calendar = Calendar.current
+        guard let window = episode.checkInWindow(for: checkInType) else {
+            print("❌ Could not calculate the \(checkInType.displayName) window")
+            return nil
+        }
+
         let notificationHour = UserDefaults.standard.object(forKey: "notificationHour") as? Int ?? 9
         let notificationMinute = UserDefaults.standard.object(forKey: "notificationMinute") as? Int ?? 0
-        let now = Date()
-        
-        switch checkInType {
-        case .twentyFourHour:
-            // Day after episode at 9 AM
-            guard let nextDay = calendar.date(byAdding: .day, value: 1, to: episode.date) else {
-                print("❌ Could not calculate next day for 24h check-in")
-                return nil
-            }
-            let notificationDate = calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: nextDay)
-            
-            // If the calculated date is in the past, schedule for tomorrow at 9 AM instead
-            if let date = notificationDate, date <= now {
-                print("⚠️ 24h notification would be in past, scheduling for next available time")
-                return calendar.date(byAdding: .day, value: 1, to: now)?.setting(hour: notificationHour, minute: notificationMinute)
-            }
-            
-            return notificationDate
-            
-        case .twoWeek:
-            // 2 weeks after episode at 9 AM
-            guard let targetDate = calendar.date(byAdding: .day, value: 14, to: episode.date) else {
-                print("❌ Could not calculate 2-week date")
-                return nil
-            }
-            return calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: targetDate)
-
-        case .threeMonth:
-            // 3 months after episode at 9 AM
-            guard let targetDate = calendar.date(byAdding: .day, value: 90, to: episode.date) else {
-                print("❌ Could not calculate 3-month date")
-                return nil
-            }
-            return calendar.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: targetDate)
-        }
+        return Calendar.current.date(bySettingHour: notificationHour, minute: notificationMinute, second: 0, of: window.start)
     }
-    
+
     private func notificationMessage(for checkInType: CheckInType, episodeTitle: String) -> String {
         switch checkInType {
         case .twentyFourHour:
@@ -214,6 +187,39 @@ class NotificationManager: ObservableObject {
             return
         }
 
+        rescheduleAllNotifications(modelContext: modelContext)
+
+        do {
+            try modelContext.save()
+            UserDefaults.standard.set(true, forKey: migrationKey)
+            print("✅ Migrated notifications to UUID-based IDs")
+        } catch {
+            print("❌ Notification migration failed to save: \(error)")
+        }
+    }
+
+    // Called when the reminder time changes in Settings. Already-scheduled
+    // reminders carry the old time, so cancel and re-schedule them all.
+    @MainActor
+    func rescheduleForNewReminderTime(modelContext: ModelContext) async {
+        await checkPermission()
+        guard hasPermission else { return }
+
+        rescheduleAllNotifications(modelContext: modelContext)
+
+        do {
+            try modelContext.save()
+            print("✅ Re-scheduled reminders for the new reminder time")
+        } catch {
+            print("❌ Failed to save re-scheduled reminders: \(error)")
+        }
+    }
+
+    // Cancel every episode's pending reminders via the stored IDs, then
+    // re-schedule the ones still ahead. Callers save the context and must
+    // have checked permission.
+    @MainActor
+    private func rescheduleAllNotifications(modelContext: ModelContext) {
         let episodes = (try? modelContext.fetch(FetchDescriptor<Episode>())) ?? []
 
         for episode in episodes {
@@ -221,30 +227,19 @@ class NotificationManager: ObservableObject {
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: episode.notificationIDs)
             }
 
-            // Re-schedule only check-ins that are still ahead of the user;
-            // scheduleNotification itself skips dates already in the past
-            episode.notificationIDs = CheckInType.allCases.compactMap { type in
-                guard !episode.hasCheckIn(for: type), !episode.isCheckInDismissed(for: type) else { return nil }
-                return scheduleNotification(for: episode, checkInType: type)
-            }
-        }
-
-        do {
-            try modelContext.save()
-            UserDefaults.standard.set(true, forKey: migrationKey)
-            print("✅ Migrated notifications to UUID-based IDs for \(episodes.count) episodes")
-        } catch {
-            print("❌ Notification migration failed to save: \(error)")
+            episode.notificationIDs = scheduleRemainingNotifications(for: episode)
         }
     }
 
-}
-
-
-// Helper extension for setting date components
-extension Date {
-    func setting(hour: Int, minute: Int) -> Date? {
-        let calendar = Calendar.current
-        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: self)
+    // Schedule reminders for an episode's check-ins that are still ahead:
+    // not completed, not dismissed, and (checked in scheduleNotification)
+    // not in the past. Returns the scheduled IDs to store on the episode.
+    // Callers must have checked permission.
+    func scheduleRemainingNotifications(for episode: Episode) -> [String] {
+        CheckInType.allCases.compactMap { type in
+            guard !episode.hasCheckIn(for: type), !episode.isCheckInDismissed(for: type) else { return nil }
+            return scheduleNotification(for: episode, checkInType: type)
+        }
     }
+
 }

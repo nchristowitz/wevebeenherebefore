@@ -20,7 +20,7 @@ struct ImportView: View {
     @State private var showingResult = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(alignment: .leading, spacing: 24) {
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
@@ -95,7 +95,8 @@ struct ImportView: View {
             }
         } message: {
             if let result = importResult {
-                Text("Successfully imported \(result.episodes) episodes, \(result.cards) cards, \(result.notes) notes, and \(result.checkIns) check-ins.")
+                Text("Successfully imported \(result.episodes) episodes, \(result.cards) cards, \(result.notes) notes, and \(result.checkIns) check-ins."
+                     + (result.skippedDuplicates > 0 ? " Skipped \(result.skippedDuplicates) already in the app." : ""))
             } else if let error = importError {
                 Text(error.localizedDescription)
             }

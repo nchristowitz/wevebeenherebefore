@@ -9,6 +9,7 @@ struct EpisodesListView: View {
 
     @State private var isShowingEpisodeFlow = false
     @State private var activeSheet: ActiveSheet?
+    @State private var episodePendingDeletion: Episode?
 
     enum ActiveSheet: Identifiable {
         case checkIn(Episode, CheckInType)
@@ -16,6 +17,23 @@ struct EpisodesListView: View {
         var id: String {
             "checkIn"
         }
+    }
+
+    struct PendingCheckIn: Identifiable {
+        let episode: Episode
+        let checkInType: CheckInType
+
+        var id: String {
+            "\(episode.uuid.uuidString)_\(checkInType.rawValue)"
+        }
+    }
+
+    // Check-ins whose window is open now, soonest horizon first
+    private var pendingCheckIns: [PendingCheckIn] {
+        episodes.flatMap { episode in
+            episode.pendingCheckInTypes.map { PendingCheckIn(episode: episode, checkInType: $0) }
+        }
+        .sorted { $0.checkInType.daysFromEpisode < $1.checkInType.daysFromEpisode }
     }
 
     // Group episodes by year, then month, so the list can show year dividers
@@ -37,6 +55,27 @@ struct EpisodesListView: View {
         NavigationStack {
             ZStack {
                 List {
+                    // Open check-ins sit above the episode history
+                    if !pendingCheckIns.isEmpty {
+                        Section {
+                            ForEach(pendingCheckIns) { checkIn in
+                                CheckInCard(
+                                    episode: checkIn.episode,
+                                    checkInType: checkIn.checkInType,
+                                    onTap: {
+                                        activeSheet = .checkIn(checkIn.episode, checkIn.checkInType)
+                                    },
+                                    onDismiss: {
+                                        dismissCheckIn(checkIn)
+                                    }
+                                )
+                                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                            }
+                        }
+                    }
+
                     ForEach(groupedByYear, id: \.year) { yearGroup in
                         // Year divider splitting the episode history visually
                         Section {
@@ -74,14 +113,23 @@ struct EpisodesListView: View {
                                             }
                                         }
                                     }
-                                }
-                                .onDelete { offsets in
-                                    deleteEpisodesInGroup(group: group.episodes, offsets: offsets)
+                                    .swipeActions(edge: .trailing) {
+                                        // No destructive role: that removes the
+                                        // row straight away, before the user confirms
+                                        Button {
+                                            episodePendingDeletion = episode
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                        .tint(.red)
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                // Room below the last row so the floating '+' never covers it
+                .contentMargins(.bottom, 88, for: .scrollContent)
                 .navigationDestination(for: Episode.self) { episode in
                     EpisodeSummaryView(episode: episode)
                 }
@@ -94,25 +142,12 @@ struct EpisodesListView: View {
                         Button(action: {
                             isShowingEpisodeFlow = true
                         }) {
-                            if #available(iOS 26.0, *) {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 60, height: 60)
-                                    .glassEffect()
-                            } else {
-                                Image(systemName: "plus")
-                                    .font(.title2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 60, height: 60)
-                                    .background(
-                                        Circle()
-                                            .fill(.thickMaterial)
-                                            .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
-                                    )
-                            }
+                            Image(systemName: "plus")
+                                .font(.title2)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                                .frame(width: 60, height: 60)
+                                .glassEffect()
                         }
                         .padding(.trailing, 20)
                         .padding(.bottom, 20)
@@ -135,6 +170,21 @@ struct EpisodesListView: View {
                     }
                 }
             }
+            .alert(
+                "Delete this episode?",
+                isPresented: Binding(
+                    get: { episodePendingDeletion != nil },
+                    set: { if !$0 { episodePendingDeletion = nil } }
+                ),
+                presenting: episodePendingDeletion
+            ) { episode in
+                Button("Delete", role: .destructive) {
+                    deleteEpisode(episode)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: { episode in
+                Text("\"\(episode.title)\" and all its notes, check-ins and summary will be permanently deleted.")
+            }
             .onAppear {
                 // Handle deep link navigation from notifications
                 if let navigation = notificationCoordinator.pendingNavigation {
@@ -152,20 +202,29 @@ struct EpisodesListView: View {
         }
     }
     
-    private func deleteEpisodesInGroup(group: [Episode], offsets: IndexSet) {
+    private func deleteEpisode(_ episode: Episode) {
         withAnimation {
-            for index in offsets {
-                let episode = group[index]
-                // Cancel all notifications for this episode before deleting
-                episode.cancelAllNotifications()
-                modelContext.delete(episode)
-            }
+            // Cancel all notifications for this episode before deleting
+            episode.cancelAllNotifications()
+            modelContext.delete(episode)
 
             do {
                 try modelContext.save()
             } catch {
-                print("Error deleting episodes: \(error)")
+                print("Error deleting episode: \(error)")
             }
+        }
+        // Its pending check-ins no longer count towards the badge
+        updateBadgeCount()
+    }
+
+    private func dismissCheckIn(_ checkIn: PendingCheckIn) {
+        checkIn.episode.dismissCheckIn(for: checkIn.checkInType)
+        do {
+            try modelContext.save()
+            updateBadgeCount()
+        } catch {
+            print("Error dismissing check-in: \(error)")
         }
     }
 

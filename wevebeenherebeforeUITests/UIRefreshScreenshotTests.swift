@@ -40,14 +40,15 @@ final class UIRefreshScreenshotTests: XCTestCase {
         }
         app.buttons["Done"].tap()
 
-        // ---- Resilience tab: redesigned check-in cards ----
-        app.tabBars.buttons["Resilience"].tap()
+        // ---- Episodes tab: check-in cards above the episode history ----
+        app.tabBars.buttons["Episodes"].tap()
         let checkInCard = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS 'Check-in'")).firstMatch
         XCTAssertTrue(checkInCard.waitForExistence(timeout: 5))
-        saveShot(app, name: "1-resilience-checkin-cards")
+        saveShot(app, name: "1-episodes-checkin-cards")
 
-        // Song cards (text+song row, image+text+song pill) sit below the fold
+        // ---- Resilience tab: song cards (text+song row, image+text+song pill) ----
+        app.tabBars.buttons["Resilience"].tap()
         app.swipeUp()
         Thread.sleep(forTimeInterval: 0.8)
         saveShot(app, name: "1a-resilience-song-cards")
